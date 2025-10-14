@@ -32,7 +32,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { PolarAngleAxis, RadialBar, RadialBarChart } from "recharts";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import clsx from "clsx";
-import { useSubmissions } from "@/hooks/aggregators/useSubmissions";
+import { Submission, useSubmissions } from "@/hooks/aggregators/useSubmissions";
 import { useParams } from "next/navigation";
 import ProceedsViewer from "@/features/Aggregators/dialogs/ProceedsViewer";
 import { toast } from "sonner";
@@ -247,7 +247,8 @@ function InspectionPage() {
    * Opens the ProceedsViewer dialog for assigning produce to bulk traders
    * This is called after inspection is saved to finalize the transaction
    */
-  const handleAssignToBulkFoods = useCallback(() => {
+  const handleAssignToBulkFoods = useCallback(async () => {
+    await handleSave();
     setShowProceedsViewer(true);
   }, []);
 
@@ -290,6 +291,8 @@ function InspectionPage() {
     <>
       {/* ProceedsViewer Dialog - Opens when assigning to bulk traders */}
       <ProceedsViewer
+        submission={currentSubmission as Submission}
+        aggregatorId={aggregatorId as number}
         open={showProceedsViewer}
         onClose={() => setShowProceedsViewer(false)}
       />
