@@ -1,0 +1,51 @@
+"use client";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { ReactNode } from "react";
+import { LayoutPanelTop, Package } from "lucide-react";
+
+const sidebarData = {
+  user: {
+    name: "shadcn",
+    email: "m@example.com",
+    avatar: "/avatars/shadcn.jpg",
+  },
+  navMain: [
+    {
+      title: "Dashboard",
+      url: "/dashboard/aggregator",
+      icon: <LayoutPanelTop className="h-4 w-4" />,
+    },
+    {
+      title: "Submissions",
+      url: "/dashboard/aggregator/submissions",
+      icon: <Package className="h-4 w-4" />,
+    },
+  ],
+};
+
+<AppSidebar data={sidebarData} />;
+
+export default function Page({ children }: { children: ReactNode }) {
+  return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar data={sidebarData} variant="floating" />
+      <SidebarInset>
+        <div className="flex flex-1 flex-col p-2 ">
+          <div className="@container/main flex  bg-background  rounded-2xl dark:bg-accent/10 relative border   shadow flex-1 flex-col gap-2">
+            <SiteHeader />
+            {children}
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
