@@ -3,7 +3,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ReactNode } from "react";
-import { LayoutPanelTop, Package } from "lucide-react";
+import { LayoutPanelTop } from "lucide-react";
 
 const sidebarData = {
   user: {
@@ -14,14 +14,14 @@ const sidebarData = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard/aggregator",
+      url: "/dashboard/farmers",
       icon: <LayoutPanelTop className="h-4 w-4" />,
     },
-    {
-      title: "Submissions",
-      url: "/dashboard/aggregator/submissions",
-      icon: <Package className="h-4 w-4" />,
-    },
+    // {
+    //   title: "Inventory",
+    //   url: "/dashboard/bulk_trader/inventory",
+    //   icon: <Table className="h-4 w-4" />,
+    // },
   ],
 };
 

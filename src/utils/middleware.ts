@@ -2,42 +2,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-type UserRole = "aggregator" | "bulk-trader" | null;
+type UserRole = "aggregator" | "bulk_trader" | "farmer";
 
-async function getUserRole(supabase: any, userId: string): Promise<UserRole> {
-  try {
-    // Check aggregators table
-    const { data: aggregatorData, error: aggError } = await supabase
-      .from("aggregators")
-      .select("role")
-      .eq("user_id", userId)
-      .single();
+const ROLE_COOKIE_NAME = "user_role";
 
-    if (aggregatorData?.role) {
-      return aggregatorData.role as UserRole;
-    }
-
-    // Check bulk_traders table
-    const { data: traderData, error: traderError } = await supabase
-      .from("bulk_traders")
-      .select("role")
-      .eq("user_id", userId)
-      .single();
-
-    if (traderData?.role) {
-      return traderData.role as UserRole;
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Unexpected error fetching user role:", error);
-    return null;
-  }
+/**
+ * Extract role from pathname
+ */
+function getRoleFromPathname(pathname: string): UserRole | null {
+  if (pathname.includes("/aggregator")) return "aggregator";
+  if (pathname.includes("/bulk_trader") || pathname.includes("/bulk_trader"))
+    return "bulk_trader";
+  if (pathname.includes("/farmer")) return "farmer";
+  return null;
 }
 
 function getRoleBasePath(role: UserRole): string {
   if (role === "aggregator") return "/dashboard/aggregator";
-  if (role === "bulk-trader") return "/dashboard/bulk-trader";
+  if (role === "bulk_trader") return "/dashboard/bulk_trader";
+  if (role === "farmer") return "/dashboard/farmers";
   return "/";
 }
 
@@ -45,8 +28,11 @@ function getUserAccessibleRoutes(role: UserRole): string[] {
   if (role === "aggregator") {
     return ["/dashboard/aggregator"];
   }
-  if (role === "bulk-trader") {
-    return ["/dashboard/bulk-trader"];
+  if (role === "bulk_trader") {
+    return ["/dashboard/bulk_trader", "/dashboard/bulk_trader"];
+  }
+  if (role === "farmer") {
+    return ["/dashboard/farmers"];
   }
   return [];
 }
@@ -86,45 +72,39 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // Public routes
   const publicRoutes = [
     "/",
     "/signup",
     "/login",
+    "/login/aggregator",
+    "/login/bulk_trader",
+    "/login/farmer",
     "/forgot-password",
     "/reset-password",
   ];
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // If user is trying to access a protected route, store which tab they were on
-  if (!user && !isPublicRoute) {
-    const roleFromPath = pathname.includes("aggregator")
-      ? "aggregator"
-      : pathname.includes("bulk-trader")
-      ? "bulk-trader"
-      : null;
-
-    if (roleFromPath) {
-      supabaseResponse.cookies.set("intended_role", roleFromPath, {
-        maxAge: 60 * 5, // 5 minutes
-        path: "/",
-      });
-    }
-  }
-
+  // If no user, redirect to home unless on public route
   if (userError || !user) {
     if (isPublicRoute) {
       return supabaseResponse;
     }
+
     if (userError) {
       console.error("Error fetching user:", userError.message);
     }
+
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  const userRole = await getUserRole(supabase, user.id);
+  // Get role from cookie
+  const roleCookie = request.cookies.get(ROLE_COOKIE_NAME);
+  const userRole = roleCookie?.value as UserRole | undefined;
 
+  // If user is authenticated but no role cookie, log them out
   if (!userRole) {
     try {
       await supabase.auth.signOut({ scope: "local" });
@@ -134,59 +114,62 @@ export async function updateSession(request: NextRequest) {
 
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    url.searchParams.set("error", "unauthorized_role");
-    url.searchParams.set("message", "User does not have an authorized role");
+    url.searchParams.set("error", "no_role");
+    url.searchParams.set("message", "Session expired. Please log in again.");
 
     const response = NextResponse.redirect(url);
-    response.cookies.delete("intended_role");
-    return response;
-  }
-
-  // Check if there's an intended role cookie (from before login)
-  const intendedRole = request.cookies.get("intended_role")?.value as UserRole;
-
-  // If user tried to access a different role's dashboard before login, log them out
-  if (intendedRole && intendedRole !== userRole) {
-    try {
-      await supabase.auth.signOut({ scope: "local" });
-    } catch (error) {
-      console.error("Error during logout:", error);
-    }
-
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.searchParams.set("error", "role_mismatch");
-    url.searchParams.set(
-      "message",
-      `You are logged in as a ${userRole}, but tried to access the ${intendedRole} tab. Please log in on the correct tab.`
-    );
-
-    const response = NextResponse.redirect(url);
-    response.cookies.delete("intended_role");
+    response.cookies.delete(ROLE_COOKIE_NAME);
     return response;
   }
 
   const roleBasePath = getRoleBasePath(userRole);
   const accessibleRoutes = getUserAccessibleRoutes(userRole);
 
-  // Check if user is trying to access a protected route they don't have access to
+  // Check if user is trying to access a dashboard route
   if (pathname.startsWith("/dashboard")) {
-    if (!accessibleRoutes.some((route) => pathname.startsWith(route))) {
+    // Check if the path matches their authorized role's routes
+    const hasAccess = accessibleRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    if (!hasAccess) {
+      // User is trying to access a dashboard that doesn't match their role
+      const requestedRole = getRoleFromPathname(pathname);
+
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch (error) {
+        console.error("Error during logout:", error);
+      }
+
       const url = request.nextUrl.clone();
-      url.pathname = roleBasePath;
+      url.pathname = "/";
+      url.searchParams.set("error", "role_mismatch");
+      url.searchParams.set(
+        "message",
+        `You are logged in as a ${userRole}, but tried to access the ${
+          requestedRole || "unauthorized"
+        } dashboard. Please select the correct role.`
+      );
+
       const response = NextResponse.redirect(url);
-      response.cookies.delete("intended_role");
+      response.cookies.delete(ROLE_COOKIE_NAME);
       return response;
     }
   }
 
-  // If authenticated and on home page, redirect to role-based dashboard
+  // If user is authenticated and on root path ("/"), redirect to their dashboard
   if (pathname === "/" && user) {
     const url = request.nextUrl.clone();
     url.pathname = roleBasePath;
-    const response = NextResponse.redirect(url);
-    response.cookies.delete("intended_role");
-    return response;
+    return NextResponse.redirect(url);
+  }
+
+  // If authenticated user is on a login page, redirect to their dashboard
+  if (pathname.startsWith("/login") && user) {
+    const url = request.nextUrl.clone();
+    url.pathname = roleBasePath;
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

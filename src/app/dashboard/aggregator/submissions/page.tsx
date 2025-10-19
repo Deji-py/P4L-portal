@@ -20,7 +20,7 @@ const formatNaira = (amount: number): string => {
 
 function SubmissionsPage() {
   const profile = useProfileStore((state) => state.profile);
-  const { profile: serverProfile } = useProfile();
+  const { profile: serverProfile } = useProfile("aggregators");
 
   const aggregatorId = profile?.id || serverProfile?.id;
 

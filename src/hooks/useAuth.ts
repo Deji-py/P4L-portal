@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { EmailOtpType, User, createClient } from "@supabase/supabase-js";
+import { EmailOtpType, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabaseClient } from "@/utils/client";
 
@@ -11,59 +11,86 @@ type AuthCallback<T = any> = {
   onError?: (error: Error) => void;
 };
 
-// Define AdminData type based on admin table schema
-type AdminData = {
-  id: string;
-  user_id: string;
-  name: string;
-  role: string;
-  created_at: string;
-};
+type UserRole = "aggregator" | "bulk_trader" | "farmer";
 
-type CombinedUser = User & {
-  isAdmin?: boolean;
-  adminData?: AdminData | null;
-};
+const ROLE_COOKIE_NAME = "user_role";
 
-// Fetch authenticated user and their admin data
-const fetchUser = async (): Promise<CombinedUser | null> => {
+// Helper to set role cookie
+function setRoleCookie(role: UserRole) {
+  document.cookie = `${ROLE_COOKIE_NAME}=${role}; path=/; max-age=${
+    60 * 60 * 24 * 7
+  }; samesite=lax; secure`;
+}
+
+// Helper to clear role cookie
+function clearRoleCookie() {
+  document.cookie = `${ROLE_COOKIE_NAME}=; path=/; max-age=0; samesite=lax; secure`;
+}
+
+// Fetch authenticated user
+const fetchUser = async (): Promise<User | null> => {
   try {
     const { data, error } = await supabaseClient.auth.getUser();
     if (error) {
-      // console.error("Error fetching user:", error.message);
       return null;
     }
-    if (!data.user) return null;
+    return data.user || null;
+  } catch (error) {
+    return null;
+  }
+};
 
-    const { data: adminData, error: adminError } = await supabaseClient
-      .from("admin")
-      .select("*")
-      .eq("user_id", data.user.id)
-      .in("role", ["admin", "superadmin"])
+// Fetch user role from database
+const fetchUserRole = async (userId: string): Promise<UserRole | null> => {
+  try {
+    // Check aggregators table
+    const { data: aggregatorData } = await supabaseClient
+      .from("aggregators")
+      .select("role")
+      .eq("user_id", userId)
+      .not("role", "is", null)
       .single();
 
-    // PGRST116 means "No rows found", which is not an error for non-admin users
-    if (adminError && adminError.code !== "PGRST116") {
-      // console.error("Error fetching admin data:", adminError.message);
-      return null;
+    if (aggregatorData?.role) {
+      return "aggregator";
     }
 
-    return {
-      ...data.user,
-      isAdmin: !!adminData,
-      adminData: adminData ? (adminData as AdminData) : null,
-    };
+    // Check bulk_traders table
+    const { data: traderData } = await supabaseClient
+      .from("bulk_traders")
+      .select("role")
+      .eq("user_id", userId)
+      .not("role", "is", null)
+      .single();
+
+    if (traderData?.role) {
+      return "bulk_trader";
+    }
+
+    // Check farmers table
+    const { data: farmerData } = await supabaseClient
+      .from("farmers")
+      .select("role")
+      .eq("user_id", userId)
+      .not("role", "is", null)
+      .single();
+
+    if (farmerData?.role) {
+      return "farmer";
+    }
+
+    return null;
   } catch (error) {
-    // console.error("Unexpected error in fetchUser:", error);
+    console.error("Error fetching user role:", error);
     return null;
   }
 };
 
 // Login with email and password
 const login = async (
-  data: { email: string; password: string },
-  callbacks?: AuthCallback<CombinedUser | null>
-): Promise<CombinedUser | null> => {
+  data: { email: string; password: string; role: string },
+  callbacks?: AuthCallback<User | null>
+): Promise<User | null> => {
   try {
     const { data: loginData, error } =
       await supabaseClient.auth.signInWithPassword({
@@ -75,30 +102,33 @@ const login = async (
       throw new Error(error?.message || "Login failed");
     }
 
-    if (!loginData.user) return null;
+    // Fetch user's actual role from database
+    const userRole = await fetchUserRole(loginData.user.id);
 
-    const { data: adminData, error: adminError } = await supabaseClient
-      .from("admin")
-      .select("*")
-      .eq("user_id", loginData.user.id)
-      .in("role", ["admin", "superadmin"])
-      .single();
-
-    if (adminError && adminError.code !== "PGRST116") {
-      throw new Error(`Error fetching admin data: ${adminError.message}`);
+    if (!userRole) {
+      // User doesn't have a role in any of the tables
+      await supabaseClient.auth.signOut({ scope: "local" });
+      throw new Error("User does not have an authorized role");
     }
 
-    callbacks?.onSuccess?.({
-      ...loginData.user,
-      isAdmin: !!adminData,
-      adminData: adminData ? (adminData as AdminData) : null,
-    });
-    return {
-      ...loginData.user,
-      isAdmin: !!adminData,
-      adminData: adminData ? (adminData as AdminData) : null,
-    };
+    // Verify that the role they're trying to login as matches their actual role
+    const normalizedRequestedRole =
+      data.role === "bulk_trader" ? "bulk_trader" : data.role;
+
+    if (userRole !== normalizedRequestedRole) {
+      await supabaseClient.auth.signOut({ scope: "local" });
+      throw new Error(
+        `You are registered as a ${userRole}, but tried to login as a ${normalizedRequestedRole}. Please select the correct role.`
+      );
+    }
+
+    // Set role cookie
+    setRoleCookie(userRole);
+
+    callbacks?.onSuccess?.(loginData.user);
+    return loginData.user;
   } catch (error) {
+    clearRoleCookie();
     const err =
       error instanceof Error ? error : new Error("Unknown error during login");
     callbacks?.onError?.(err);
@@ -111,8 +141,13 @@ const logout = async (callbacks?: AuthCallback<void>): Promise<void> => {
   try {
     const { error } = await supabaseClient.auth.signOut({ scope: "local" });
     if (error) throw error;
+
+    // Clear role cookie
+    clearRoleCookie();
+
     callbacks?.onSuccess?.(undefined);
   } catch (error) {
+    clearRoleCookie();
     const err =
       error instanceof Error ? error : new Error("Unknown error during logout");
     callbacks?.onError?.(err);
@@ -195,16 +230,11 @@ const verifyOtp = async (
   }
 };
 
-// Check if current user is admin
-function checkIsAdmin(user: CombinedUser | null): boolean {
-  return !!user?.isAdmin;
-}
-
 // Hook that provides auth utilities
 function useAuth() {
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading: userLoading } = useQuery<CombinedUser | null>({
+  const { data: user, isLoading: userLoading } = useQuery<User | null>({
     queryKey: ["auth", "user"],
     queryFn: fetchUser,
     retry: 1,
@@ -214,7 +244,7 @@ function useAuth() {
   const loginMutation = useMutation({
     mutationFn: (args: {
       data: { email: string; password: string; role: string };
-      callbacks?: AuthCallback<CombinedUser | null>;
+      callbacks?: AuthCallback<User | null>;
     }) => login(args.data, args.callbacks),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
@@ -285,7 +315,7 @@ function useAuth() {
 
     login: (
       data: { email: string; password: string; role: string },
-      callbacks?: AuthCallback<CombinedUser | null>
+      callbacks?: AuthCallback<User | null>
     ) => loginMutation.mutateAsync({ data, callbacks }),
     loginStatus: loginMutation.status,
 
@@ -308,8 +338,6 @@ function useAuth() {
       callbacks?: AuthCallback<User>
     ) => verifyOtpMutation.mutateAsync({ data, callbacks }),
     verifyOtpStatus: verifyOtpMutation.status,
-
-    checkIsAdmin: () => checkIsAdmin(user ?? null),
   };
 }
 

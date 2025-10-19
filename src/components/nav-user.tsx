@@ -1,14 +1,11 @@
 "use client";
-
 import {
-  IconCreditCard,
   IconDotsVertical,
   IconLogout,
-  IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,11 +29,7 @@ export function NavUser() {
   const { isMobile } = useSidebar();
   const router = useRouter();
 
-  const { user, userLoading, logout } = useAuth();
-
-  if (!user?.adminData && userLoading) {
-    return null; // or a loading state
-  }
+  const { user, logout } = useAuth();
 
   return (
     <SidebarMenu>
@@ -55,7 +48,7 @@ export function NavUser() {
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user?.email}</span>
                 <span className="inline-flex w-fit mt-1 items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-                  {user?.adminData?.role}
+                  User
                 </span>
               </div>
               <IconDotsVertical className="ml-auto size-4" />
@@ -77,7 +70,7 @@ export function NavUser() {
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user?.email}</span>
                   <span className="inline-flex w-fit mt-1 items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-                    {user?.adminData?.role}
+                    User
                   </span>
                 </div>
               </div>

@@ -16,7 +16,7 @@ type AggregatorDetailProps = {
 
 function AggregatorDetail({ onAssignProceeds }: AggregatorDetailProps) {
   const { profile, profileLoading, profileError, profileErrorData } =
-    useProfile();
+    useProfile("aggregators");
 
   const setProfile = useProfileStore((state) => state.setProfile);
 

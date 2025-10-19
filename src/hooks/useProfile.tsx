@@ -5,9 +5,9 @@ import { supabaseClient } from "@/utils/client";
 import { useQuery } from "@tanstack/react-query";
 import useAuth from "./useAuth";
 
-const fetchProfile = async (userId: string) => {
+const fetchProfile = async (userId: string, tableName: string) => {
   const { data, error } = await supabaseClient
-    .from("aggregators")
+    .from(tableName)
     .select("*")
     .eq("user_id", userId)
     .single();
@@ -21,7 +21,7 @@ const fetchProfile = async (userId: string) => {
   return data;
 };
 
-function useProfile() {
+function useProfile(tableName: "aggregators" | "bulk_traders") {
   const { user } = useAuth();
 
   const {
@@ -31,7 +31,7 @@ function useProfile() {
     error: profileErrorData,
   } = useQuery({
     queryKey: ["profile", user?.id],
-    queryFn: () => fetchProfile(user?.id as string),
+    queryFn: () => fetchProfile(user?.id as string, tableName),
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

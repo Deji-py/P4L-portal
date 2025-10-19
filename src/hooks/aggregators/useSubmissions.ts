@@ -191,8 +191,6 @@ export const useSubmissions = (aggregatorId: number, all_only = false) => {
       queryClient.invalidateQueries({
         queryKey: ["submissions", "pending_submissions", aggregatorId],
       });
-
-      console.log("Submission updated:", response.message);
     },
     onError: (error: Error) => {
       console.error("Error updating submission:", error.message);

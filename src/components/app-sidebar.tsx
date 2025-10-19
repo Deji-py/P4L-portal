@@ -18,6 +18,7 @@ import { HelpCircle, Settings } from "lucide-react";
 
 import clsx from "clsx";
 import AggregatorDashboardCard from "@/features/Aggregators/aggregator-sidebar-indicator";
+import useProfile from "@/hooks/useProfile";
 
 export type NavItem = {
   title: string;
@@ -40,6 +41,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 
 export function AppSidebar({ data, ...props }: AppSidebarProps) {
   const { open } = useSidebar();
+  const { profile } = useProfile("bulk_traders");
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -59,7 +61,7 @@ export function AppSidebar({ data, ...props }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent className={clsx(open ? "px-2" : "px-0")}>
-        <AggregatorDashboardCard />
+        {open && <AggregatorDashboardCard role={profile?.role} />}
         <NavMain items={data.navMain} />
       </SidebarContent>
 

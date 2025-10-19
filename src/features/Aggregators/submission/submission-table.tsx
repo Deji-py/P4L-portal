@@ -142,7 +142,7 @@ function SubmissionTable({
   loading: boolean;
 }) {
   const router = useRouter();
-  const { profile } = useProfile();
+  const { profile } = useProfile("aggregators");
   const [showProceedsViewer, setShowProceedsViewer] = useState(false);
   const [showDetailsSheet, setShowDetailsSheet] = useState(false);
   const [selectedSubmission, setSelectedSubmission] =

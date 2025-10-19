@@ -121,8 +121,6 @@ const cellTypeToInputType = (
   }
 
   switch (cellType) {
-    case "rich-text":
-      return "rich-text";
     case "text":
     case "link":
     case "phone":

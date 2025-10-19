@@ -13,7 +13,7 @@ import useProfile from "@/hooks/useProfile";
 
 function DashboardStats() {
   const profile = useProfileStore((state) => state.profile);
-  const { profile: serverProfile } = useProfile();
+  const { profile: serverProfile } = useProfile("aggregators");
 
   const { statistics, isLoading } = useStatistics(
     profile?.id || serverProfile?.id

@@ -25,15 +25,12 @@ import {
   BreadcrumbSeparator,
 } from "./ui/breadcrumb";
 import { useMemo } from "react";
-import useProfile from "@/hooks/useProfile";
 
 export function SiteHeader() {
   const { logout, user } = useAuth();
   const { setTheme, theme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-
-  const { profile } = useProfile();
 
   const handleLogout = () => {
     logout();

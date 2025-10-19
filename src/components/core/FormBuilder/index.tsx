@@ -22,7 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, X } from "lucide-react"; // Added X for badge removal
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"; // Added Badge import
-import { Editor } from "@/components/blocks/editor-x/editor";
 import { SerializedEditorState } from "lexical";
 
 export type FormType = {
@@ -39,8 +38,8 @@ export type FormType = {
     | "select"
     | "date"
     | "otp"
-    | "combobox"
-    | "rich-text";
+    | "combobox";
+
   defaultValue?: string | number | boolean | string[]; // Added string[] for combobox
   placeholder?: string;
   leftIcon?: React.ReactNode;
@@ -168,16 +167,6 @@ export const RenderFormInput = (
   };
 
   switch (input_type) {
-    case "rich-text":
-      return (
-        <Editor
-          htmlContent={field.value}
-          editorSerializedState={initialValue}
-          onHtmlChange={(state) => {
-            field.onChange(state); // Update react-hook-form with editor state
-          }}
-        />
-      );
     case "text":
     case "email":
     case "password":
