@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
 // Role type definition
-type RoleType = "aggregator" | "farmer" | "bulk_trader" | null;
+type RoleType = "aggregator" | "farmer" | "bulk-trader" | null;
 
 // Role card data
 const roles = [
@@ -86,7 +85,7 @@ const roles = [
     ),
   },
   {
-    id: "bulk_trader",
+    id: "bulk-trader",
     title: "Bulk Trader",
     description:
       "Access premium wholesale markets and execute high-volume trades",
@@ -153,7 +152,7 @@ const RoleSelectionScreen = () => {
             Welcome Back
           </h1>
           <p className="text-muted-foreground text-sm mt-2">
-           Please select your role to continue
+            Please select your role to continue
           </p>
         </motion.div>
 

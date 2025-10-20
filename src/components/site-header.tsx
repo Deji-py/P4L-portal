@@ -33,9 +33,12 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   const handleLogout = () => {
-    logout();
-    toast.success("Logged out successfully");
-    router.push("/");
+    logout({
+      onSuccess: () => {
+        toast.success("Logged out successfully");
+        window.location.href = "/";
+      },
+    });
   };
 
   // Generate breadcrumbs from pathname
@@ -220,14 +223,14 @@ export function SiteHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">Aggregator</p>
+                  <p className="text-sm font-medium">Hi, There</p>
                   <p className="text-xs text-muted-foreground">
                     {user?.email || "admin@example.com"}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
+              <DropdownMenuItem className="cursor-pointer ">
                 <User className="mr-2 h-4 w-4" />
                 Help and Support
               </DropdownMenuItem>
@@ -237,7 +240,8 @@ export function SiteHeader() {
               </DropdownMenuItem> */}
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer text-red-600 focus:text-red-600"
+                variant="destructive"
+                className="cursor-pointer text-red-600 focus:text-red-600 !hover:bg-red-500/20"
                 onClick={handleLogout}
               >
                 <LogOutIcon className="mr-2 h-4 w-4 text-destructive" />

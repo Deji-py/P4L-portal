@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseClient } from "@/utils/client";
+import { toast } from "sonner";
 
 // Type Definitions
 interface Farmer {
@@ -25,6 +26,10 @@ interface Farmer {
   created_at: string | null;
   years_of_operation: string | null;
   local_gov_area: string | null;
+  farm_image_url : string | null;
+  farm_video_url : string | null;
+  address : string | null;
+
 }
 
 interface FarmerProduce {
@@ -36,6 +41,7 @@ interface FarmerProduce {
   product_name: string | null;
   request_id: number | null;
 }
+
 export type StatusType =
   | "pending"
   | "approved"
@@ -56,6 +62,7 @@ export interface Submission {
   no_of_proceeds: number | null;
   farmer_info: Farmer;
   produce: FarmerProduce[];
+  
 }
 
 interface UpdateSubmissionPayload {
@@ -84,7 +91,7 @@ const fetchSubmissionsPending = async (
   });
 
   if (error) {
-    console.log(error);
+    console.error("Error fetching pending submissions:", error);
     throw new Error(`Failed to fetch submissions: ${error.message}`);
   }
 
@@ -100,7 +107,7 @@ const fetchSubmissions = async (
   });
 
   if (error) {
-    console.log(error);
+    console.error("Error fetching all submissions:", error);
     throw new Error(`Failed to fetch submissions: ${error.message}`);
   }
 
@@ -125,7 +132,7 @@ const updateSubmission = async (
     .single();
 
   if (error) {
-    console.log(error);
+    console.error("Error updating submission:", error);
     throw new Error(`Failed to update submission: ${error.message}`);
   }
 
@@ -165,6 +172,8 @@ export const useSubmissions = (aggregatorId: number, all_only = false) => {
     queryFn: () => fetchSubmissionsPending(aggregatorId),
     enabled: !!aggregatorId && !all_only,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const {
@@ -178,6 +187,8 @@ export const useSubmissions = (aggregatorId: number, all_only = false) => {
     queryFn: () => fetchSubmissions(aggregatorId),
     enabled: !!aggregatorId,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const {
@@ -186,14 +197,33 @@ export const useSubmissions = (aggregatorId: number, all_only = false) => {
     error: updateError,
   } = useMutation({
     mutationFn: (payload: UpdateSubmissionPayload) => updateSubmission(payload),
-    onSuccess: (response, variables) => {
-      // Invalidate the query to refetch
-      queryClient.invalidateQueries({
-        queryKey: ["submissions", "pending_submissions", aggregatorId],
-      });
+    onSuccess: async (response, variables) => {
+      // Show success toast
+      toast.success(response.message);
+
+      // Invalidate and refetch both queries
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["pending_submissions", aggregatorId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["submissions", aggregatorId],
+        }),
+      ]);
+
+      // Force refetch to ensure data is fresh
+      await Promise.all([
+        queryClient.refetchQueries({
+          queryKey: ["pending_submissions", aggregatorId],
+        }),
+        queryClient.refetchQueries({
+          queryKey: ["submissions", aggregatorId],
+        }),
+      ]);
     },
     onError: (error: Error) => {
       console.error("Error updating submission:", error.message);
+      toast.error(error.message || "Failed to update submission");
     },
   });
 
@@ -219,12 +249,12 @@ export const useSubmissions = (aggregatorId: number, all_only = false) => {
   };
 
   return {
-    pendingSubmissions,
+    pendingSubmissions: pendingSubmissions || [],
     pendingSubmissionsLoading,
     pendingSubmissionsError,
     pendingSubmissionsErrorData,
     refetchPendingSubmissions,
-    submissions,
+    submissions: submissions || [],
     submissionsLoading,
     submissionsError,
     submissionsErrorData,

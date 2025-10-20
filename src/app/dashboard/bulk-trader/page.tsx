@@ -20,6 +20,7 @@ import ViewAllRidersDialog from "@/features/Bulk-Foods/dashboard/viewall-riders-
 import { useBulkFoodRequests } from "@/hooks/bulk-traders/useBulkFoodRequests";
 import { useInventory } from "@/hooks/bulk-traders/useInventory";
 
+
 const dispatch_statistics = [
   {
     title: "Assigned",
@@ -102,7 +103,7 @@ function BulkTraderDashboard() {
     toast.success("Request Accepted", {
       description: "The request has been accepted successfully.",
     });
-    router.push(`/dashboard/bulk_trader/?tab=accepted`);
+    router.push(`/dashboard/bulk-trader/?tab=accepted`);
   };
 
   const handleDecline = (id: number) => {
@@ -123,11 +124,11 @@ function BulkTraderDashboard() {
       description: "Dispatch rider has been assigned successfully.",
     });
     setDispatchSheetOpen(false);
-    router.push(`/dashboard/bulk_trader/?tab=out_for_delivery`);
+    router.push(`/dashboard/bulk-trader/?tab=out_for_delivery`);
   };
 
   const handleTrackRider = () => {
-    router.push(`/dashboard/bulk_trader/tracking/1`);
+    router.push(`/dashboard/bulk-trader/tracking/1`);
   };
 
   const handleAddToInventory = async (
@@ -159,7 +160,7 @@ function BulkTraderDashboard() {
           [`${farmerId}-${farmerRequestId}`]: true,
         }));
 
-        router.push(`/dashboard/bulk_trader/inventory`);
+        router.push(`/dashboard/bulk-trader/inventory`);
       } else {
         toast.error("Failed to Add", {
           description: result.message,

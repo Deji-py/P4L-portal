@@ -19,7 +19,7 @@ const sidebarData = {
     },
     // {
     //   title: "Inventory",
-    //   url: "/dashboard/bulk_trader/inventory",
+    //   url: "/dashboard/bulk-trader/inventory",
     //   icon: <Table className="h-4 w-4" />,
     // },
   ],

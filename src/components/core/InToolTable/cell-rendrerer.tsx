@@ -107,7 +107,7 @@ export const cellRenderers: Record<CellType, React.ComponentType<any>> = {
   ),
 
   boolean: ({ value }) => (
-    <div className="flex justify-center">
+    <div className="flex justify-start items-center ">
       {value ? (
         <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-1 rounded-full border border-green-200 dark:border-green-700/30">
           <Check className="h-3 w-3" />
@@ -141,7 +141,8 @@ export const cellRenderers: Record<CellType, React.ComponentType<any>> = {
       lower.includes("completed") ||
       lower.includes("done") ||
       lower.includes("approved") ||
-      lower.includes("published")
+      lower.includes("published") ||
+      lower.includes("accepted")
     ) {
       colorClasses =
         "bg-green-600/20 text-primary  dark:bg-primary dark:text-white dark:border-green-700";
@@ -158,7 +159,8 @@ export const cellRenderers: Record<CellType, React.ComponentType<any>> = {
     } else if (
       lower.includes("error") ||
       lower.includes("failed") ||
-      lower.includes("inactive")
+      lower.includes("inactive") ||
+      lower.includes("rejected")
     ) {
       colorClasses =
         "bg-red-600/20 text-red-600  dark:bg-red-600 dark:text-white dark:border-red-700";

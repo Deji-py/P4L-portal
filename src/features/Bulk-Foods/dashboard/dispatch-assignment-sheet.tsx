@@ -352,7 +352,7 @@ const DispatchAssignmentSheet: React.FC<DispatchAssignmentSheetProps> = ({
 
     // Navigate to tracking after 3 seconds
     setTimeout(() => {
-      router.push(`/dashboard/bulk_trader/tracking/${requestId}`);
+      router.push(`/dashboard/bulk-trader/tracking/${requestId}`);
       closeAssignmentDialog();
     }, 3000);
   };

@@ -24,6 +24,10 @@ import {
 import useAuth from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  INTENDED_ROLE_COOKIE_NAME,
+  ROLE_COOKIE_NAME,
+} from "@/utils/middleware";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -89,7 +93,10 @@ export function NavUser() {
               onClick={() =>
                 logout({
                   onSuccess: () => {
-                    router.push("/");
+                    window.location.href = "/";
+                    //remove user_role and intended-role cooke
+                    document.cookie = `${ROLE_COOKIE_NAME}=; path=/; max-age=0; samesite=lax; secure httponly`;
+                    document.cookie = `${INTENDED_ROLE_COOKIE_NAME}=; path=/; max-age=0; samesite=lax; secure httponly`;
                   },
                   onError: (error) => {
                     toast.error(

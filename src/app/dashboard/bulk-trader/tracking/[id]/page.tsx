@@ -1,6 +1,6 @@
 import TrackingPage from "@/features/Bulk-Foods/tracking/tracking-page";
 
-// In /app/bulk_trader/tracking/[id]/page.tsx
+// In /app/bulk-trader/tracking/[id]/page.tsx
 export default async function Page({
   params,
 }: {

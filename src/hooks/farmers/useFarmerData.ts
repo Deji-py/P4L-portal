@@ -233,9 +233,9 @@ const fetchAggregatorsByLocation = async (
 ) => {
   const { data, error } = await supabaseClient
     .from("aggregators")
-    .select("id, business_name, local_gov_area, state");
-  // .eq("state", state)
-  // .eq("local_gov_area", localGovArea);
+    .select("id, business_name, local_gov_area, state")
+    // .eq("state", state)
+    .eq("local_gov_area", localGovArea);
 
   if (error) {
     throw new Error(`Failed to fetch aggregators: ${error.message}`);

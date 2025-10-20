@@ -5,9 +5,8 @@ import { z } from "zod";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Leaf, Lock, Mail, RotateCcw, Truck } from "lucide-react";
-import logo_full from "../../../../../public/branding/logo_full.svg";
+import { useRouter, usePathname } from "next/navigation";
+import { ArrowLeft, Leaf, Lock, Mail, RotateCcw, Truck } from "lucide-react";
 
 // UI Components
 import { Form } from "@/components/ui/form";
@@ -29,7 +28,6 @@ import { supabaseClient } from "@/utils/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { IconPackages } from "@tabler/icons-react";
-import Image from "next/image";
 
 // ============================================================================
 // SCHEMAS
@@ -83,7 +81,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 type OtpFormData = z.infer<typeof otpSchema>;
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 type StepType = "login" | "forgotPassword" | "otp" | "resetPassword";
-type RoleType = "aggregator" | "bulk_trader" | "farmer";
+type RoleType = "aggregator" | "bulk-trader" | "farmer";
 
 // ============================================================================
 // ROLE CONFIGURATIONS
@@ -97,7 +95,7 @@ const roleConfig = {
     accentColor: "text-primary dark:text-primary",
     iconBg: "bg-secondary dark:bg-secondary/30",
   },
-  bulk_trader: {
+  "bulk-trader": {
     title: "Bulk Trader",
     description: "Purchase produce at scale",
     icon: <Truck />,
@@ -186,8 +184,6 @@ const LoginScreen = () => {
   const pathname = usePathname();
   const { login, forgotPassword, verifyOtp, userLoading } = useAuth();
 
-  const params = useSearchParams();
-
   const [step, setStep] = useState<StepType>("login");
   const [role, setRole] = useState<RoleType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -199,8 +195,8 @@ const LoginScreen = () => {
   useEffect(() => {
     const extractedRole = pathname.includes("aggregator")
       ? "aggregator"
-      : pathname.includes("bulk_trader") || pathname.includes("bulk_trader")
-      ? "bulk_trader"
+      : pathname.includes("bulk-trader")
+      ? "bulk-trader"
       : pathname.includes("farmer")
       ? "farmer"
       : null;
@@ -274,7 +270,7 @@ const LoginScreen = () => {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-muted">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           <p className="text-sm text-muted-foreground font-medium">
             Loading...
           </p>
@@ -297,7 +293,7 @@ const LoginScreen = () => {
         { email: data.email, password: data.password, role },
         {
           onSuccess: (userData) => {
-            window.location.reload();
+            router.push("/dashboard");
           },
         }
       );
@@ -752,15 +748,19 @@ const LoginScreen = () => {
   // ========================================================================
 
   return (
-    <div className="flex items-center flex-col justify-center h-screen w-full bg-muted ">
+    <div className="flex items-center flex-col px-4 lg:px-0 justify-center h-screen w-full bg-muted ">
       <div className=" grid grid-cols-1 max-w-md   w-full h-full ">
         <div className=" col-span-4 flex flex-col justify-center items-center">
-          <a
-            href="#"
-            className="flex mb-8 w-full -ml-8  items-center justify-center self-center font-medium"
-          >
-            <Image src={logo_full} alt="logo" className=" w-24   " />
-          </a>{" "}
+          <div className=" absolute top-10 left-10">
+            {/* back button */}
+            <Button
+              variant={"secondary"}
+              onClick={() => router.push("/")}
+              className=" rounded-full ring-0 border border-primary"
+            >
+              <ArrowLeft className="w-5 h-5 text-primary hover:text-primary" />
+            </Button>
+          </div>
           <div className="w-full max-w-md">
             {step === "login" && renderLoginStep()}
             {step === "forgotPassword" && renderForgotPasswordStep()}

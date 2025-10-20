@@ -11,7 +11,7 @@ import {
 function AggregatorDashboardCard({
   role,
 }: {
-  role: "aggregator" | "bulk_trader";
+  role: "aggregator" | "bulk-trader";
 }) {
   if (!role) return null;
 
@@ -32,7 +32,7 @@ function AggregatorDashboardCard({
         { icon: TrendingUp, label: "Analytics" },
       ],
     },
-    bulk_trader: {
+    "bulk-trader": {
       icon: Package,
       title: "Bulk Trader Dashboard",
       description: "Track inventory, manage orders, optimize distribution",

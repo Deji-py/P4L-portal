@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 import { useState } from "react";
 
 import {
@@ -20,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Leaf } from "lucide-react";
 import { toast } from "sonner";
 import { useFarmerData } from "@/hooks/farmers/useFarmerData";
 
@@ -168,20 +167,8 @@ export function CreateProduceRequestDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex flex-col items-center text-center mb-2">
-            <div className="w-14 h-14 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-3">
-              <svg
-                className="w-8 h-8 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+            <div className="w-14 h-14 bg-secondary text-primary rounded-2xl flex items-center justify-center mb-3">
+              <Leaf />
             </div>
             <DialogTitle className="text-xl">
               Create Produce Request
@@ -262,7 +249,7 @@ export function CreateProduceRequestDialog({
                         handleProductChange(index, value);
                       }}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full  !h-11 ">
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>
@@ -310,7 +297,7 @@ export function CreateProduceRequestDialog({
                         updateProduceItem(index, "unit_measure", value)
                       }
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full !h-11">
                         <SelectValue placeholder="Select unit" />
                       </SelectTrigger>
                       <SelectContent>

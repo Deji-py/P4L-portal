@@ -173,17 +173,14 @@ const scoreProduce = async (payload: ScoreProducePayload): Promise<any> => {
       score: payload.score,
     })
     .eq("farmer_request_id", payload.requestId)
-    .select()
+    .select();
 
-    console.log(payload.requestId, payload.score)
-   
+  console.log(payload.requestId, payload.score);
 
   if (error) {
     console.error(error);
     throw new Error(`Failed to score produce: ${error.message}`);
   }
-
-
 
   return data;
 };

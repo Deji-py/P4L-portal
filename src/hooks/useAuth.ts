@@ -11,15 +11,15 @@ type AuthCallback<T = any> = {
   onError?: (error: Error) => void;
 };
 
-type UserRole = "aggregator" | "bulk_trader" | "farmer";
+type UserRole = "aggregator" | "bulk-trader" | "farmer";
 
-const ROLE_COOKIE_NAME = "user_role";
+const ROLE_COOKIE_NAME = "intended_role";
 
 // Helper to set role cookie
 function setRoleCookie(role: UserRole) {
   document.cookie = `${ROLE_COOKIE_NAME}=${role}; path=/; max-age=${
     60 * 60 * 24 * 7
-  }; samesite=lax; secure`;
+  }; samesite=lax; secure httponly`;
 }
 
 // Helper to clear role cookie
@@ -40,55 +40,9 @@ const fetchUser = async (): Promise<User | null> => {
   }
 };
 
-// Fetch user role from database
-const fetchUserRole = async (userId: string): Promise<UserRole | null> => {
-  try {
-    // Check aggregators table
-    const { data: aggregatorData } = await supabaseClient
-      .from("aggregators")
-      .select("role")
-      .eq("user_id", userId)
-      .not("role", "is", null)
-      .single();
-
-    if (aggregatorData?.role) {
-      return "aggregator";
-    }
-
-    // Check bulk_traders table
-    const { data: traderData } = await supabaseClient
-      .from("bulk_traders")
-      .select("role")
-      .eq("user_id", userId)
-      .not("role", "is", null)
-      .single();
-
-    if (traderData?.role) {
-      return "bulk_trader";
-    }
-
-    // Check farmers table
-    const { data: farmerData } = await supabaseClient
-      .from("farmers")
-      .select("role")
-      .eq("user_id", userId)
-      .not("role", "is", null)
-      .single();
-
-    if (farmerData?.role) {
-      return "farmer";
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error fetching user role:", error);
-    return null;
-  }
-};
-
 // Login with email and password
 const login = async (
-  data: { email: string; password: string; role: string },
+  data: { email: string; password: string; role: UserRole },
   callbacks?: AuthCallback<User | null>
 ): Promise<User | null> => {
   try {
@@ -103,27 +57,8 @@ const login = async (
     }
 
     // Fetch user's actual role from database
-    const userRole = await fetchUserRole(loginData.user.id);
 
-    if (!userRole) {
-      // User doesn't have a role in any of the tables
-      await supabaseClient.auth.signOut({ scope: "local" });
-      throw new Error("User does not have an authorized role");
-    }
-
-    // Verify that the role they're trying to login as matches their actual role
-    const normalizedRequestedRole =
-      data.role === "bulk_trader" ? "bulk_trader" : data.role;
-
-    if (userRole !== normalizedRequestedRole) {
-      await supabaseClient.auth.signOut({ scope: "local" });
-      throw new Error(
-        `You are registered as a ${userRole}, but tried to login as a ${normalizedRequestedRole}. Please select the correct role.`
-      );
-    }
-
-    // Set role cookie
-    setRoleCookie(userRole);
+    setRoleCookie(data.role);
 
     callbacks?.onSuccess?.(loginData.user);
     return loginData.user;
@@ -243,7 +178,7 @@ function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: (args: {
-      data: { email: string; password: string; role: string };
+      data: { email: string; password: string; role: UserRole };
       callbacks?: AuthCallback<User | null>;
     }) => login(args.data, args.callbacks),
     onSuccess: (_data, variables) => {
@@ -314,7 +249,7 @@ function useAuth() {
     userLoading,
 
     login: (
-      data: { email: string; password: string; role: string },
+      data: { email: string; password: string; role: UserRole },
       callbacks?: AuthCallback<User | null>
     ) => loginMutation.mutateAsync({ data, callbacks }),
     loginStatus: loginMutation.status,

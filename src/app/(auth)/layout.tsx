@@ -1,21 +1,20 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import React, { useEffect } from "react";
 import { toast } from "sonner";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const params = useSearchParams();
-
-  const message = params.get("message");
-  const error = params.get("error");
+  const pathname = usePathname();
 
   useEffect(() => {
+    const error = params.get("error");
+    const message = params.get("message");
+
     if (error) {
-      toast.error(error, {
-        description: message,
-      });
+      toast.error(message || "An error occurred");
     }
-  }, [error, message]);
+  }, [params, pathname]);
 
   return <div>{children}</div>;
 }
