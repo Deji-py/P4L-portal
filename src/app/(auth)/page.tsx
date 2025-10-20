@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 import Image from "next/image";
 import logo_full from "@/../public/branding/logo_full.svg";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { useCookies } from "react-cookie";
+import {
+  INTENDED_ROLE_COOKIE_NAME,
+  ROLE_COOKIE_NAME,
+  ROLE_HASH_COOKIE_NAME,
+} from "@/utils/middleware";
 
 // Role type definition
 type RoleType = "aggregator" | "farmer" | "bulk-trader" | null;
@@ -131,6 +138,28 @@ const RoleSelectionScreen = () => {
       router.push(`/login/${selectedRole}`);
     }
   };
+
+  const params = useSearchParams();
+  const pathname = usePathname();
+
+  const [cookies, setCookie, removeCookie] = useCookies([
+    ROLE_COOKIE_NAME,
+    INTENDED_ROLE_COOKIE_NAME,
+    ROLE_HASH_COOKIE_NAME,
+  ]);
+
+  useEffect(() => {
+    const error = params.get("error");
+    const message = params.get("message");
+
+    if (error && message) {
+      toast.error(message || "An error occurred");
+      removeCookie(ROLE_COOKIE_NAME);
+      removeCookie(INTENDED_ROLE_COOKIE_NAME);
+      removeCookie(ROLE_HASH_COOKIE_NAME);
+      router.push("/");
+    }
+  }, [params, pathname]);
 
   return (
     <div className="min-h-screen bg-background flex-col flex items-center gap-6 justify-center p-4 pb-10">
