@@ -44,7 +44,6 @@ export default function FarmerDashboardPage() {
   const {
     farmer,
     analytics,
-    analyticsLoading,
     useFarmerRequests,
     farmerLoading,
     updateProfile,

@@ -19,52 +19,58 @@ function DashboardStats() {
     profile?.id || serverProfile?.id
   );
 
-  const averageScore = statistics?.averageScore || 0;
+  const inspectedCount = statistics?.totalInspected || 0;
+  const assignedCount = statistics?.assignedCount || 0;
+  const averageScore = statistics?.averageScore ?? 100;
   const remainingScore = 100 - averageScore;
+  const totalRequests = statistics?.totalRequests || 0;
+  const totalAccepted =
+    statistics?.totalAccepted || 0 + assignedCount + inspectedCount;
+  const totalRejected = statistics?.totalRejected || 0;
 
   // Get color and severity based on score percentage
   const getScoreSeverity = (score: number) => {
     if (score === 0) {
       return {
-        color: "#dc2626", // red-600
-        bgColor: "#fee2e2", // red-100
+        color: "#dc2626",
+        bgColor: "#fee2e2",
         severity: "Critical",
-        textColor: "#991b1b", // red-800
+        textColor: "#991b1b",
       };
     } else if (score < 25) {
       return {
-        color: "#ea580c", // orange-600
-        bgColor: "#ffedd5", // orange-100
+        color: "#ea580c",
+        bgColor: "#ffedd5",
         severity: "Poor",
-        textColor: "#9a3412", // orange-800
+        textColor: "#9a3412",
       };
     } else if (score < 50) {
       return {
-        color: "#f59e0b", // amber-500
-        bgColor: "#fef3c7", // amber-100
+        color: "#f59e0b",
+        bgColor: "#fef3c7",
         severity: "Fair",
-        textColor: "#92400e", // amber-800
+        textColor: "#92400e",
       };
     } else if (score < 75) {
       return {
-        color: "#3b82f6", // blue-500
-        bgColor: "#dbeafe", // blue-100
+        color: "#3b82f6",
+        bgColor: "#dbeafe",
         severity: "Good",
-        textColor: "#1e40af", // blue-800
+        textColor: "#1e40af",
       };
     } else if (score < 90) {
       return {
-        color: "#059669", // emerald-600
-        bgColor: "#d1fae5", // emerald-100
+        color: "#059669",
+        bgColor: "#d1fae5",
         severity: "Great",
-        textColor: "#065f46", // emerald-800
+        textColor: "#065f46",
       };
     } else {
       return {
-        color: "#16a34a", // green-600
-        bgColor: "#dcfce7", // green-100
+        color: "#16a34a",
+        bgColor: "#dcfce7",
         severity: "Excellent",
-        textColor: "#166534", // green-800
+        textColor: "#166534",
       };
     }
   };
@@ -100,19 +106,10 @@ function DashboardStats() {
   // Format number with K suffix
   const formatNumber = (num: number): string => {
     if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}K+`;
+      return `${(num / 1000).toFixed(1)}K`;
     }
-    return `${num}+`;
+    return `${num}`;
   };
-
-  // Calculate new proceeds (submissions in last 7 days)
-  const newProceeds = statistics?.totalSubmissions
-    ? Math.min(statistics.totalSubmissions, 2)
-    : 0;
-
-  const totalScore = React.useMemo(() => {
-    return averageScore;
-  }, [averageScore]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-7 gap-3 sm:gap-4 min-h-[180px] sm:max-h-[200px]">
@@ -133,27 +130,24 @@ function DashboardStats() {
               </svg>
             </div>
             <div className="text-end text-white flex flex-col items-end">
-              <p className="font-semibold text-xs sm:text-sm">
-                {isLoading ? "..." : `${newProceeds}+ new`}
-              </p>
               <p className="text-xs sm:text-sm text-[#DFF3C4]">
-                Total Proceeds
+                Total Requests
               </p>
             </div>
           </div>
           <div className="flex-1 flex flex-col justify-center items-center py-2 sm:py-0">
             <h3 className="text-2xl sm:text-3xl text-white font-bold">
-              {isLoading ? "..." : formatNumber(statistics?.totalProceeds || 0)}
+              {isLoading ? "..." : formatNumber(totalRequests)}
             </h3>
           </div>
         </div>
 
         <div className="pt-3 sm:pt-4 border-t border-t-primary justify-between flex flex-wrap items-center gap-2">
           <div className="text-xs sm:text-sm text-[#DFF3C4] py-1 px-2.5 sm:px-3 bg-primary rounded-full font-semibold">
-            {isLoading ? "..." : `${statistics?.assignedCount || 0}+ Assigned`}
+            {isLoading ? "..." : `${formatNumber(totalAccepted)} Accepted`}
           </div>
           <div className="text-xs sm:text-sm text-[#DFF3C4] py-1 px-2.5 sm:px-3 bg-primary rounded-full font-semibold">
-            {isLoading ? "..." : `${statistics?.pendingCount || 0}+ Pending`}
+            {isLoading ? "..." : `${formatNumber(totalRejected)} Rejected`}
           </div>
         </div>
       </div>
@@ -201,7 +195,7 @@ function DashboardStats() {
                           className="text-xl sm:text-xl font-bold"
                           fill={severity.textColor}
                         >
-                          {isLoading ? "..." : `${totalScore}%`}
+                          {isLoading ? "..." : `${averageScore.toFixed(1)}%`}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
@@ -220,8 +214,7 @@ function DashboardStats() {
           </PieChart>
         </ChartContainer>
 
-        {/* Label with Severity */}
-        <div className="text-center ">
+        <div className="text-center">
           <p className="text-gray-600 text-xs font-medium">Average Score</p>
         </div>
       </div>

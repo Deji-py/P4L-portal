@@ -35,7 +35,7 @@ export default function Page({ children }: { children: ReactNode }) {
         } as React.CSSProperties
       }
     >
-      <AppSidebar data={sidebarData} variant="floating" />
+      <AppSidebar data={sidebarData} variant="floating" role="bulk_traders" />
       <SidebarInset>
         <div className="flex flex-1 flex-col p-2 ">
           <div className="@container/main flex  bg-background  rounded-2xl dark:bg-accent/10 relative border   shadow flex-1 flex-col gap-2">

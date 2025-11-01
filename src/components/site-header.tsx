@@ -12,9 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import useAuth from "@/hooks/useAuth";
 import { ChevronDown, LogOutIcon, User } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
-import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import {
   Breadcrumb,
@@ -28,8 +27,7 @@ import { useMemo } from "react";
 
 export function SiteHeader() {
   const { logout, user } = useAuth();
-  const { setTheme, theme } = useTheme();
-  const router = useRouter();
+
   const pathname = usePathname();
 
   const handleLogout = () => {
@@ -64,24 +62,6 @@ export function SiteHeader() {
 
     return crumbs;
   }, [pathname]);
-
-  const notifications = [
-    { id: 1, message: "New user registered", time: "2 min ago", unread: true },
-    {
-      id: 2,
-      message: "System update completed",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      message: "Backup completed successfully",
-      time: "3 hours ago",
-      unread: false,
-    },
-  ];
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <header className="flex h-16 sticky top-0 z-40 shrink-0 items-center gap-2 border-b rounded-t-2xl bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-16">

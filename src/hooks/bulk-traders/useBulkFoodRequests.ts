@@ -54,7 +54,7 @@ const fetchBulkFoodRequests = async (
   limit: number = 10
 ): Promise<{ data: BulkFoodRequest[]; count: number }> => {
   let query = supabaseClient
-    .from("bulk_food_request")
+    .from("aggregator_requests")
     .select(
       `
       *,
@@ -129,7 +129,7 @@ const fetchRequestCounts = async (
   await Promise.all(
     statuses.map(async (status) => {
       const { count, error } = await supabaseClient
-        .from("bulk_food_request")
+        .from("aggregator_requests")
         .select("*", { count: "exact", head: true })
         .eq("bulk_trader_id", bulkTraderId)
         .eq("status", status);
@@ -151,7 +151,7 @@ const updateRequestStatus = async (
   payload: UpdateRequestStatusPayload
 ): Promise<BulkFoodRequest> => {
   const { data, error } = await supabaseClient
-    .from("bulk_food_request")
+    .from("aggregator_requests")
     .update({ status: payload.status })
     .eq("id", payload.requestId)
     .select()
@@ -168,7 +168,7 @@ const updateRequestStatus = async (
 // Score produce
 const scoreProduce = async (payload: ScoreProducePayload): Promise<any> => {
   const { data, error } = await supabaseClient
-    .from("bulk_food_request")
+    .from("aggregator_requests")
     .update({
       score: payload.score,
     })
@@ -190,7 +190,7 @@ const assignDispatch = async (payload: AssignDispatchPayload): Promise<any> => {
   // This would create an entry in a dispatch_assignments table
   // For now, we'll just update the status
   const { data, error } = await supabaseClient
-    .from("bulk_food_request")
+    .from("aggregator_requests")
     .update({
       status: "out_for_delivery",
       // dispatch_id: payload.dispatchId // Add this column to your schema
@@ -222,7 +222,7 @@ export const useBulkFoodRequests = (
     error: requestsErrorData,
     refetch: refetchRequests,
   } = useQuery({
-    queryKey: ["bulk_food_requests", bulkTraderId, status, page, limit],
+    queryKey: ["aggregator_requests", bulkTraderId, status, page, limit],
     queryFn: () => fetchBulkFoodRequests(bulkTraderId, status, page, limit),
     enabled: !!bulkTraderId,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -233,7 +233,7 @@ export const useBulkFoodRequests = (
     isLoading: countsLoading,
     refetch: refetchCounts,
   } = useQuery({
-    queryKey: ["bulk_food_request_counts", bulkTraderId],
+    queryKey: ["aggregator_requests_counts", bulkTraderId],
     queryFn: () => fetchRequestCounts(bulkTraderId),
     enabled: !!bulkTraderId,
     staleTime: 1000 * 60 * 5,
@@ -248,10 +248,10 @@ export const useBulkFoodRequests = (
       updateRequestStatus(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["bulk_food_requests"],
+        queryKey: ["aggregator_requests"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["bulk_food_request_counts"],
+        queryKey: ["aggregator_requests_counts"],
       });
     },
     onError: (error: Error) => {
@@ -267,10 +267,10 @@ export const useBulkFoodRequests = (
     mutationFn: (payload: ScoreProducePayload) => scoreProduce(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["bulk_food_requests"],
+        queryKey: ["aggregator_requests"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["bulk_food_request_counts"],
+        queryKey: ["aggregator_requests_counts"],
       });
     },
     onError: (error: Error) => {
@@ -286,10 +286,10 @@ export const useBulkFoodRequests = (
     mutationFn: (payload: AssignDispatchPayload) => assignDispatch(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["bulk_food_requests"],
+        queryKey: ["aggregator_requests"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["bulk_food_request_counts"],
+        queryKey: ["aggregator_requests_counts"],
       });
     },
     onError: (error: Error) => {

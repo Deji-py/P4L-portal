@@ -193,13 +193,13 @@ function SubmissionTable({
     useState<Submission | null>(null);
   const [showProduceCheckViewer, setShowProduceCheckViewer] = useState(false);
   const { handleApproveSubmission, handleRejectSubmission, isUpdating } =
-    useSubmissions(profile?.aggregator_id as number);
+    useSubmissions(profile?.id as number);
 
   // Transform the Submission data to match our table structure
   const tableData: SubmissionTableData[] = data?.map((submission) => ({
     id: submission.id,
     farm_name: submission.farmer_info?.farm_cluster_name || "N/A",
-    no_of_proceeds: submission.no_of_proceeds || 0,
+    no_of_proceeds: submission.produce.length || 0.0,
     farmer_name: submission.farmer_info?.full_name || "Unknown",
     farmer_id: submission.farmer_id,
     local_gov_area: submission.farmer_info?.local_gov_area || "N/A",
@@ -212,26 +212,20 @@ function SubmissionTable({
   const handleAssignToBulkFoods = useCallback(
     (row: SubmissionTableData) => {
       setShowProceedsViewer(true);
-      const selected = data.find(
-        (item) => item.aggregator_id === row.aggregator_id
-      ) as Submission;
+      const selected = data.find((item) => item.id === row.id) as Submission;
       setSelectedSubmission(selected);
     },
     [data]
   );
 
   const handleViewSubmissionDetails = (row: SubmissionTableData) => {
-    const selected = data.find(
-      (item) => item.aggregator_id === row.aggregator_id
-    ) as Submission;
+    const selected = data.find((item) => item.id === row.id) as Submission;
     setSelectedSubmission(selected);
     setShowDetailsSheet(true);
   };
 
   const handleViewFarmerDetails = (row: SubmissionTableData) => {
-    const selected = data.find(
-      (item) => item.aggregator_id === row.aggregator_id
-    ) as Submission;
+    const selected = data.find((item) => item.id === row.id) as Submission;
     setSelectedSubmission(selected);
     setShowFarmerDialog(true);
   };
@@ -247,19 +241,17 @@ function SubmissionTable({
     {
       label: "Start Inspection",
       onClick: (row) => {
-        router.push(`/dashboard/aggregator/inspection/${row?.aggregator_id}`);
+        router.push(`/dashboard/aggregator/inspection/${row?.id}`);
       },
       icon: <CheckCircle className="h-5 w-5" />,
       hidden: (row) => {
-        return row.status !== "approved" && row.status !== "inspected";
+        return row.status !== "accepted";
       },
     },
     {
       label: "Review",
       onClick: (row) => {
-        const selected = data.find(
-          (item) => item.aggregator_id === row.aggregator_id
-        ) as Submission;
+        const selected = data.find((item) => item.id === row.id) as Submission;
         setSelectedSubmission(selected);
         setShowProduceCheckViewer(true);
       },
@@ -291,7 +283,7 @@ function SubmissionTable({
         columns={columns}
         isLoading={loading}
         data={tableData}
-        disableFiltering={false}
+        disableFiltering={true}
         table_hidden_columns={[]}
       />
 
@@ -421,7 +413,9 @@ function SubmissionTable({
                     <div>
                       <p className="text-muted-foreground">Address</p>
                       <p className="font-medium">
-                        {selectedSubmission.farmer_info?.address || "N/A"}
+                        {selectedSubmission.farmer_info?.address ||
+                          `${selectedSubmission.farmer_info.local_gov_area}, ${selectedSubmission.farmer_info.state}` ||
+                          "N/A"}
                       </p>
                     </div>
                     <div>
@@ -607,7 +601,7 @@ function SubmissionTable({
       </Dialog>
 
       <ProceedsViewer
-        aggregatorId={selectedSubmission?.aggregator_id as number}
+        aggregatorId={selectedSubmission?.id as number}
         submission={selectedSubmission as Submission}
         open={showProceedsViewer}
         onClose={() => setShowProceedsViewer(false)}

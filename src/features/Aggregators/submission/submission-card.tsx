@@ -1,57 +1,8 @@
 import { Button } from "@/components/ui/button";
 import ProduceCheckViewer from "@/features/Aggregators/dialogs/ProduceCheckViewer";
-import { useSubmissions } from "@/hooks/aggregators/useSubmissions";
+import { Submission, useSubmissions } from "@/hooks/aggregators/useSubmissions";
 import clsx from "clsx";
 import { useState } from "react";
-
-interface FarmerProduce {
-  id: number;
-  submission_date: string;
-  quantity: number | null;
-  unit_measure: string | null;
-  unit_price: number | null;
-  product_name: string | null;
-  request_id: number | null;
-}
-
-interface Farmer {
-  id: number;
-  user_id: string | null;
-  full_name: string | null;
-  farm_cluster_name: string | null;
-  contact_information: string | null;
-  state: string | null;
-  farm_size: string | null;
-  farming_type: string[] | null;
-  main_crops: string | null;
-  seasonal_calendar: string | null;
-  monthly_output: string | null;
-  irrigation_methods_used: string | null;
-  post_harvest_facilities_available: string | null;
-  ownership_type: string[] | null;
-  land_tenure_status: string[] | null;
-  is_cooperative_member: boolean | null;
-  has_extension_service_access: boolean | null;
-  support_needed_areas: string[] | null;
-  support_needed_other: string | null;
-  created_at: string | null;
-  years_of_operation: string | null;
-  local_gov_area: string | null;
-}
-
-interface Submission {
-  id: number;
-  submitted_at: string;
-  aggregator_id: number | null;
-  status: "pending" | "approved" | "rejected" | string;
-  score: number | null;
-  accepted: number | null;
-  rejected: number | null;
-  farmer_id: number | null;
-  no_of_proceeds: number | null;
-  farmer_info: Farmer;
-  produce: FarmerProduce[];
-}
 
 interface SubmissionCardProps {
   submission: Submission;

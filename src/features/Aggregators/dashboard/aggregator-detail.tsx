@@ -1,14 +1,25 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { Blocks, Package } from "lucide-react";
+import { Blocks, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
 import { IconCalendarEvent } from "@tabler/icons-react";
-import Link from "next/link";
 import useProfile from "@/hooks/useProfile";
 import moment from "moment";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useProfileStore } from "@/store/profile.store";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAggregatorLocation } from "@/hooks/aggregators/useAggregatorLocation";
 
 type AggregatorDetailProps = {
   onAssignProceeds?: () => void;
@@ -19,15 +30,30 @@ function AggregatorDetail({ onAssignProceeds }: AggregatorDetailProps) {
     useProfile("aggregators");
 
   const setProfile = useProfileStore((state) => state.setProfile);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [addressInput, setAddressInput] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [latitude, setLatitude] = useState("");
+
+  const {
+    location,
+    locationLoading,
+    updateLocation,
+    isUpdatingLocation,
+    geocodeAndUpdate,
+    isGeocoding,
+  } = useAggregatorLocation(profile?.id);
 
   useEffect(() => {
-    const udateStore = () => {
-      if (profile) {
-        setProfile(profile);
+    if (profile) {
+      setProfile(profile);
+      if (location) {
+        setLongitude(location.longitude?.toString());
+        setLatitude(location.latitude?.toString());
+        setAddressInput(location.address);
       }
-    };
-    udateStore();
-  }, [profileLoading]);
+    }
+  }, [profileLoading, location]);
 
   if (profileLoading || !profile) {
     return (
@@ -48,11 +74,110 @@ function AggregatorDetail({ onAssignProceeds }: AggregatorDetailProps) {
     );
   }
 
-  // Extract data from profile with fallbacks
   const companyName = profile.business_name || "N/A";
   const rcNumber = profile.rc_number || "N/A";
-  const location = profile.state || "N/A";
-  const subLocation = profile.local_gov_area || "N/A";
+  const locationAvailable = !!location;
+
+  const handleManualLocation = () => {
+    if (longitude && latitude) {
+      updateLocation({
+        aggregatorId: profile.id,
+        address: addressInput || "Manual Location",
+        longitude: parseFloat(longitude),
+        latitude: parseFloat(latitude),
+      });
+      setDialogOpen(false);
+    }
+  };
+
+  const handleGeocodeAddress = () => {
+    if (addressInput?.trim()) {
+      geocodeAndUpdate(addressInput);
+      setDialogOpen(false);
+    }
+  };
+
+  const handleAutoDetectLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        // Reverse geocode to get address from coordinates
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+          );
+          const data = await response.json();
+
+          const address =
+            data.display_name ||
+            `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+          // Update the input fields
+          setLatitude(latitude.toString());
+          setLongitude(longitude.toString());
+          setAddressInput(address);
+
+          // Update location in the backend
+          updateLocation({
+            aggregatorId: profile.id,
+            address: address,
+            longitude: longitude,
+            latitude: latitude,
+          });
+
+          setDialogOpen(false);
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+
+          // Fallback: use coordinates as address
+          const fallbackAddress = `Lat: ${latitude.toFixed(
+            4
+          )}, Lng: ${longitude.toFixed(4)}`;
+          setLatitude(latitude.toString());
+          setLongitude(longitude.toString());
+          setAddressInput(fallbackAddress);
+
+          updateLocation({
+            aggregatorId: profile.id,
+            address: fallbackAddress,
+            longitude: longitude,
+            latitude: latitude,
+          });
+
+          setDialogOpen(false);
+        }
+      },
+      (error) => {
+        let errorMessage = "Unable to retrieve your location";
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage =
+              "Location access denied. Please enable location permissions in your browser.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information is unavailable.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out.";
+            break;
+        }
+
+        alert(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
 
   return (
     <Card className="relative flex flex-col gap-0 pt-0 w-full rounded-xl sm:rounded-2xl overflow-hidden border-0 bg-black min-h-[180px] sm:max-h-[200px]">
@@ -67,7 +192,7 @@ function AggregatorDetail({ onAssignProceeds }: AggregatorDetailProps) {
         />
       </div>
 
-      <CardHeader className="relative z-10  p-3 sm:p-4 md:px-6 md:pt-6">
+      <CardHeader className="relative z-10 p-3 sm:p-4 md:px-6 md:pt-6">
         <div className="w-full flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 relative rounded-lg sm:rounded-xl bg-gradient-to-br from-accent/20 to-accent/20 flex items-center justify-center overflow-hidden shadow-lg flex-shrink-0 p-1.5 sm:p-2">
@@ -91,27 +216,149 @@ function AggregatorDetail({ onAssignProceeds }: AggregatorDetailProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="relative flex-1 z-10 p-3 sm:p-4 md:p-6  pt-0 sm:pt-0">
+      <CardContent className="relative flex-1 z-10 p-3 sm:p-4 md:p-6 pt-0 sm:pt-0">
         <div className="w-full flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 sm:gap-4">
-          <div className="flex-1">
-            <h3 className="text-white text-2xl sm:text-3xl font-bold mb-1 leading-tight">
-              {location}
-            </h3>
-            <p className="text-secondary text-xs sm:text-sm font-normal">
-              <span className="text-white">LGA: </span>
-              {subLocation}
-            </p>
-          </div>
-          <Link href="aggregator/submissions" className="w-full sm:w-auto">
-            <Button
-              variant="secondary"
-              onClick={onAssignProceeds}
-              className="py-2 sm:py-3 px-3 sm:px-4 h-auto rounded-lg sm:rounded-xl flex-shrink-0 w-full sm:w-auto text-xs sm:text-sm"
-            >
-              <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>View Submissions</span>
-            </Button>
-          </Link>
+          {locationAvailable ? (
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <MapPin className="w-4 h-4 text-secondary" />
+                <h3 className="text-white text-sm sm:text-base font-semibold">
+                  Location Set
+                </h3>
+              </div>
+              <p className="text-secondary text-xs sm:text-sm font-normal line-clamp-2">
+                {location?.address}
+              </p>
+              <p className="text-white/60 text-xs mt-1">
+                Lat: {location?.latitude?.toFixed(4)}, Lng:{" "}
+                {location?.longitude?.toFixed(4)}
+              </p>
+            </div>
+          ) : (
+            <div className="flex-1">
+              <h3 className="text-white text-xl sm:text-2xl font-bold mb-1">
+                Location Not Set
+              </h3>
+              <p className="text-secondary text-xs sm:text-sm font-normal">
+                Set your precise location for better visibility
+              </p>
+            </div>
+          )}
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant={locationAvailable ? "secondary" : "secondary"}
+                className={`!py-2 sm:py-3 px-3 sm:px-4 h-auto rounded-lg sm:rounded-xl flex-shrink-0 w-full sm:w-auto text-xs sm:text-sm `}
+              >
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>
+                  {locationAvailable ? "Update Location" : "Set Location"}
+                </span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Set Aggregator Location</DialogTitle>
+                <DialogDescription>
+                  Choose between entering coordinates manually or using address
+                  geocoding
+                </DialogDescription>
+              </DialogHeader>
+
+              <Tabs defaultValue="geocode" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="geocode">Address Geocoding</TabsTrigger>
+                  <TabsTrigger value="manual">Manual Coordinates</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="geocode" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      placeholder="Enter full address (e.g., 123 Main St, Lagos, Nigeria)"
+                      value={addressInput}
+                      onChange={(e) => setAddressInput(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Enter a complete address to find coordinates automatically
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={handleGeocodeAddress}
+                      disabled={isGeocoding || !addressInput?.trim()}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {isGeocoding && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
+                      {isGeocoding ? "Geocoding..." : "Geocode Address"}
+                    </Button>
+                    <Button
+                      onClick={handleAutoDetectLocation}
+                      disabled={isGeocoding}
+                      className="w-full"
+                    >
+                      {isGeocoding && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
+                      <MapPin className="w-4 h-4 mr-2" />
+                      {isGeocoding ? "Detecting..." : "Auto-Detect"}
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="manual" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="longitude">Longitude</Label>
+                      <Input
+                        id="longitude"
+                        type="number"
+                        step="0.0001"
+                        placeholder="-0.1234"
+                        value={longitude}
+                        onChange={(e) => setLongitude(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="latitude">Latitude</Label>
+                      <Input
+                        id="latitude"
+                        type="number"
+                        step="0.0001"
+                        placeholder="6.5244"
+                        value={latitude}
+                        onChange={(e) => setLatitude(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address-manual">Address (Optional)</Label>
+                    <Input
+                      id="address-manual"
+                      placeholder="e.g., Lekki, Lagos"
+                      value={addressInput}
+                      onChange={(e) => setAddressInput(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleManualLocation}
+                    disabled={isUpdatingLocation || !longitude || !latitude}
+                    className="w-full"
+                  >
+                    {isUpdatingLocation && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
+                    {isUpdatingLocation ? "Saving..." : "Save Location"}
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>

@@ -11,10 +11,8 @@ import {
 function AggregatorDashboardCard({
   role,
 }: {
-  role: "aggregator" | "bulk-trader";
+  role: "aggregator" | "bulk-trader" | "farmers";
 }) {
-  if (!role) return null;
-
   const config = {
     aggregator: {
       icon: Network,
@@ -48,14 +46,33 @@ function AggregatorDashboardCard({
         { icon: BarChart3, label: "Reports" },
       ],
     },
+    farmers: {
+      icon: Users,
+      title: "Farmers Dashboard",
+      description: "View market prices, manage your produce listings",
+      bgColor: "oklch(0.7 0.12 100)", // Yellow/gold
+      accentColor: "oklch(0.5 0.12 155)",
+      iconBgColor: "oklch(0.5 0.12 155)",
+      iconColor: "oklch(0.99 0 0)",
+      textColor: "oklch(0.99 0 0)",
+      borderColor: "oklch(0.5 0.12 155/ 0.2)",
+      stats: [
+        { icon: TrendingUp, label: "Prices" },
+        { icon: Package, label: "Listings" },
+        { icon: BarChart3, label: "Earnings" },
+      ],
+    },
   };
 
   const currentConfig = config[role];
-  const IconComponent = currentConfig?.icon;
+
+  if (!currentConfig) return null;
+
+  const IconComponent = currentConfig.icon;
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300  "
+      className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300"
       style={{
         background: currentConfig.bgColor,
       }}

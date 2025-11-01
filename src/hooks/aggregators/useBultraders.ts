@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseClient } from "@/utils/client";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 // Type Definitions
 interface BulkTrader {
@@ -51,60 +53,72 @@ const fetchBulkTraders = async (
   let query = supabaseClient
     .from("bulk_traders")
     .select("*")
+    .eq("role", "bulk-trader")
     .order("business_name", { ascending: true });
 
   // Filter by local government area if provided
-  if (localGovArea) {
+  if (localGovArea && localGovArea.trim()) {
     query = query.eq("local_gov_area", localGovArea);
   }
-
   // Filter by state as fallback
-  if (state && !localGovArea) {
+  else if (state && state.trim()) {
     query = query.eq("state", state);
   }
 
   const { data, error } = await query;
 
   if (error) {
-    console.log(error);
+    console.error("Error fetching bulk traders:", error);
     throw new Error(`Failed to fetch bulk traders: ${error.message}`);
   }
 
-  return data as BulkTrader[];
+  return (data as BulkTrader[]) || [];
 };
 
 // Assign bulk trader to farmer request
 const assignBulkTrader = async (
   payload: AssignBulkTraderPayload
 ): Promise<AssignBulkTraderResponse> => {
-  // Update farmer_requests table with bulk_trader_id
+  // First, get the current farmer request to preserve other fields
+  const { data: farmerRequest, error: fetchError } = await supabaseClient
+    .from("farmer_requests")
+    .select("*")
+    .eq("id", payload.farmerRequestId)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching farmer request:", fetchError);
+    throw new Error(`Failed to fetch farmer request: ${fetchError.message}`);
+  }
+
+  // Update farmer_requests table with bulk_trader_id and status
   const { error: updateError } = await supabaseClient
     .from("farmer_requests")
     .update({
-      bulk_trader_id: payload.bulkTraderId,
       status: "assigned",
     })
     .eq("id", payload.farmerRequestId);
 
   if (updateError) {
-    console.log(updateError);
+    console.error("Error updating farmer request:", updateError);
     throw new Error(`Failed to update farmer request: ${updateError.message}`);
   }
 
-  // Create entry in bulk_food_request table
+  // Create entry in aggregator_request table
   const { data, error: insertError } = await supabaseClient
-    .from("bulk_food_request")
+    .from("aggregator_request")
     .insert({
       bulk_trader_id: payload.bulkTraderId,
-      aggregator_id: payload.aggregatorId,
+      id: payload.aggregatorId,
       farmer_request_id: payload.farmerRequestId,
       status: "pending",
+      created_at: new Date().toISOString(),
     })
     .select()
     .single();
 
   if (insertError) {
-    console.log(insertError);
+    console.error("Error creating bulk food request:", insertError);
     throw new Error(
       `Failed to create bulk food request: ${insertError.message}`
     );
@@ -131,6 +145,8 @@ export const useBulkTrader = (localGovArea?: string, state?: string) => {
     queryFn: () => fetchBulkTraders(localGovArea || "", state || ""),
     enabled: !!(localGovArea || state),
     staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const {
@@ -141,20 +157,90 @@ export const useBulkTrader = (localGovArea?: string, state?: string) => {
   } = useMutation({
     mutationFn: (payload: AssignBulkTraderPayload) => assignBulkTrader(payload),
     onSuccess: (response) => {
+      // Show success toast
+      toast.success(response.message);
+
       // Invalidate relevant queries
+      queryClient.invalidateQueries({
+        queryKey: ["pending_submissions"],
+      });
       queryClient.invalidateQueries({
         queryKey: ["submissions"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["pending_submissions"],
+        queryKey: ["farmer_requests"],
       });
 
-      console.log("Bulk trader assigned:", response.message);
+      // Refetch to ensure fresh data
+      queryClient.refetchQueries({
+        queryKey: ["pending_submissions"],
+      });
+      queryClient.refetchQueries({
+        queryKey: ["submissions"],
+      });
     },
     onError: (error: Error) => {
       console.error("Error assigning bulk trader:", error.message);
+      toast.error(error.message || "Failed to assign bulk trader");
     },
   });
+
+  // Setup real-time listener for bulk_traders table
+  useEffect(() => {
+    const channel = supabaseClient
+      .channel("bulk_traders:changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bulk_traders",
+        },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ["bulk_traders"],
+          });
+          queryClient.refetchQueries({
+            queryKey: ["bulk_traders"],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [queryClient]);
+
+  // Setup real-time listener for aggregator_request
+  useEffect(() => {
+    const channel = supabaseClient
+      .channel("aggregator_request:changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "aggregator_request",
+        },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ["aggregator_requests"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["pending_submissions"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["submissions"],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [queryClient]);
 
   const handleAssignBulkTrader = (
     farmerRequestId: number,
@@ -169,7 +255,7 @@ export const useBulkTrader = (localGovArea?: string, state?: string) => {
   };
 
   return {
-    bulkTraders,
+    bulkTraders: bulkTraders || [],
     bulkTradersLoading,
     bulkTradersError,
     bulkTradersErrorData,

@@ -37,11 +37,12 @@ export type AppSidebarData = {
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   data: AppSidebarData;
+  role: "aggregators" | "bulk_traders" | "farmers";
 };
 
-export function AppSidebar({ data, ...props }: AppSidebarProps) {
+export function AppSidebar({ data, role, ...props }: AppSidebarProps) {
   const { open } = useSidebar();
-  const { profile } = useProfile("bulk_traders");
+  const { profile } = useProfile(role);
 
   return (
     <Sidebar collapsible="icon" {...props}>

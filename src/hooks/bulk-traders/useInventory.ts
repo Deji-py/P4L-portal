@@ -66,7 +66,7 @@ interface AddInventoryData {
 interface AddRequestToInventoryParams {
   bulk_trader_id: number;
   farmer_request_id: number;
-  aggregator_id: number;
+  id: number;
 }
 
 // Fetch inventory items
@@ -174,7 +174,7 @@ const addInventoryItem = async (
 const addRequestToInventory = async ({
   bulk_trader_id,
   farmer_request_id,
-  aggregator_id,
+  id,
 }: AddRequestToInventoryParams): Promise<{
   success: boolean;
   message: string;
@@ -183,7 +183,7 @@ const addRequestToInventory = async ({
   const { data, error } = await supabaseClient.rpc("add_request_to_inventory", {
     p_bulk_trader_id: bulk_trader_id,
     p_farmer_request_id: farmer_request_id,
-    p_aggregator_id: aggregator_id,
+    p_id: id,
   });
 
   if (error) {

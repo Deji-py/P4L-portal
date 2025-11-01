@@ -21,7 +21,7 @@ const fetchProfile = async (userId: string, tableName: string) => {
   return data;
 };
 
-function useProfile(tableName: "aggregators" | "bulk_traders") {
+function useProfile(tableName: "aggregators" | "bulk_traders" | "farmers") {
   const { user } = useAuth();
 
   const {

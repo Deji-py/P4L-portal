@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+"use client";
 import { Geist_Mono, Open_Sans } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/context/queryProvider";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { CookiesProvider } from "react-cookie";
 
 const latofont = Open_Sans({
   variable: "--font-lato",
@@ -15,11 +16,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-export const metadata: Metadata = {
-  title: "Produce For Lagos",
-  description: "Produce For Lagos aggregators and bulk traders dashboard",
-};
 
 const Preloader = () => (
   <div className="h-screen w-full bg-background flex flex-col items-center justify-center  text-white">
@@ -44,10 +40,12 @@ export default function RootLayout({
           disableTransitionOnChange
         > */}
         <Suspense fallback={<Preloader />}>
-          <QueryProvider>
-            {children}
-            <Toaster richColors position="top-left" />
-          </QueryProvider>
+          <CookiesProvider>
+            <QueryProvider>
+              {children}
+              <Toaster richColors position="top-left" />
+            </QueryProvider>
+          </CookiesProvider>
         </Suspense>
         {/* </ThemeProvider> */}
       </body>

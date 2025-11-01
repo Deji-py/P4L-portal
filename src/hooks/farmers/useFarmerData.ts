@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseClient } from "@/utils/client";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 // Type Definitions
 interface Farmer {
@@ -41,9 +43,9 @@ interface FarmerRequest {
   score: number | null;
   accepted: number | null;
   rejected: number | null;
-  no_of_proceeds: number | null;
   inspection_date: string | null;
   inspection_time: string | null;
+  rejection_reason?: string;
   aggregators?: {
     id: number;
     business_name: string;
@@ -78,7 +80,6 @@ interface FarmerAnalytics {
   acceptedRequests: number;
   rejectedRequests: number;
   pendingRequests: number;
-  totalProduce: number;
   averageScore: number;
 }
 
@@ -130,7 +131,8 @@ const fetchFarmerRequests = async (
         id,
         business_name,
         local_gov_area,
-        state
+        state,
+        aggregator_address
       )
     `,
       { count: "exact" }
@@ -176,7 +178,7 @@ const fetchFarmerAnalytics = async (
 ): Promise<FarmerAnalytics> => {
   const { data: requests, error } = await supabaseClient
     .from("farmer_requests")
-    .select("status, score, no_of_proceeds")
+    .select("status, score")
     .eq("farmer_id", farmerId);
 
   if (error) {
@@ -191,9 +193,6 @@ const fetchFarmerAnalytics = async (
   const pendingRequests =
     requests?.filter((r) => r.status === "pending").length || 0;
 
-  const totalProduce =
-    requests?.reduce((sum, r) => sum + (r.no_of_proceeds || 0), 0) || 0;
-
   const scores =
     requests?.filter((r) => r.score !== null).map((r) => r.score) || [];
   const averageScore =
@@ -206,7 +205,6 @@ const fetchFarmerAnalytics = async (
     acceptedRequests,
     rejectedRequests,
     pendingRequests,
-    totalProduce,
     averageScore,
   };
 };
@@ -216,7 +214,6 @@ const fetchProductTypes = async (): Promise<ProductType[]> => {
   const { data, error } = await supabaseClient
     .from("product_types")
     .select("*")
-    .eq("is_active", true)
     .order("product_name");
 
   if (error) {
@@ -233,8 +230,7 @@ const fetchAggregatorsByLocation = async (
 ) => {
   const { data, error } = await supabaseClient
     .from("aggregators")
-    .select("id, business_name, local_gov_area, state")
-    // .eq("state", state)
+    .select("id, business_name, local_gov_area, state, aggregator_address")
     .eq("local_gov_area", localGovArea);
 
   if (error) {
@@ -271,7 +267,6 @@ const createProduceRequest = async (payload: CreateProduceRequestPayload) => {
       farmer_id: payload.farmerId,
       aggregator_id: payload.aggregatorId,
       status: "pending",
-      no_of_proceeds: payload.produces.length,
     })
     .select()
     .single();
@@ -311,6 +306,8 @@ export const useFarmerData = (userId: string) => {
     queryKey: ["farmer", userId],
     queryFn: () => fetchFarmerByUserId(userId),
     enabled: !!userId,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Fetch farmer requests
@@ -323,6 +320,8 @@ export const useFarmerData = (userId: string) => {
       queryKey: ["farmer_requests", farmer?.id, status, page, limit],
       queryFn: () => fetchFarmerRequests(farmer!.id, status, page, limit),
       enabled: !!farmer?.id,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
     });
   };
 
@@ -335,12 +334,16 @@ export const useFarmerData = (userId: string) => {
     queryKey: ["farmer_analytics", farmer?.id],
     queryFn: () => fetchFarmerAnalytics(farmer!.id),
     enabled: !!farmer?.id,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Fetch product types
   const { data: productTypes, isLoading: productTypesLoading } = useQuery({
     queryKey: ["product_types"],
     queryFn: fetchProductTypes,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   // Fetch aggregators
@@ -350,6 +353,8 @@ export const useFarmerData = (userId: string) => {
       queryFn: () =>
         fetchAggregatorsByLocation(farmer!.state, farmer!.local_gov_area),
       enabled: !!farmer?.state && !!farmer?.local_gov_area,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
     });
   };
 
@@ -362,7 +367,11 @@ export const useFarmerData = (userId: string) => {
     mutationFn: (data: Partial<Farmer>) =>
       updateFarmerProfile({ farmerId: farmer!.id, data }),
     onSuccess: () => {
+      toast.success("Profile updated successfully");
       queryClient.invalidateQueries({ queryKey: ["farmer"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update profile");
     },
   });
 
@@ -375,10 +384,121 @@ export const useFarmerData = (userId: string) => {
     mutationFn: (payload: Omit<CreateProduceRequestPayload, "farmerId">) =>
       createProduceRequest({ ...payload, farmerId: farmer!.id }),
     onSuccess: () => {
+      toast.success("Request created successfully");
       queryClient.invalidateQueries({ queryKey: ["farmer_requests"] });
       queryClient.invalidateQueries({ queryKey: ["farmer_analytics"] });
     },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create request");
+    },
   });
+
+  // Real-time listener for farmer_requests
+  useEffect(() => {
+    if (!farmer?.id) return;
+
+    const channel = supabaseClient
+      .channel(`farmer_requests_${farmer.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "farmer_requests",
+          filter: `farmer_id=eq.${farmer.id}`,
+        },
+        () => {
+          console.log("New farmer request inserted");
+          queryClient.invalidateQueries({
+            queryKey: ["farmer_requests", farmer.id],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["farmer_analytics", farmer.id],
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "farmer_requests",
+          filter: `farmer_id=eq.${farmer.id}`,
+        },
+        () => {
+          console.log("Farmer request updated");
+          queryClient.invalidateQueries({
+            queryKey: ["farmer_requests", farmer.id],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["farmer_analytics", farmer.id],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [farmer?.id, queryClient]);
+
+  // Real-time listener for farmer_produce
+  useEffect(() => {
+    if (!farmer?.id) return;
+
+    const channel = supabaseClient
+      .channel(`farmer_produce_${farmer.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "farmer_produce",
+        },
+        () => {
+          console.log("Farmer produce changed");
+          queryClient.invalidateQueries({
+            queryKey: ["farmer_requests", farmer.id],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [farmer?.id, queryClient]);
+
+  // Real-time listener for farmers table (profile updates)
+  useEffect(() => {
+    if (!farmer?.id) return;
+
+    const channel = supabaseClient
+      .channel(`farmers_${farmer.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "farmers",
+          filter: `id=eq.${farmer.id}`,
+        },
+        () => {
+          console.log("Farmer profile updated");
+          queryClient.invalidateQueries({
+            queryKey: ["farmer", userId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["aggregators"],
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [farmer?.id, userId, queryClient]);
 
   return {
     farmer,

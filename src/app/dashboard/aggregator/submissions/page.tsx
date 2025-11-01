@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { TrendingUp, Clock, ClipboardCheck, Package } from "lucide-react";
+import { Clock, ClipboardCheck, Package } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import SubmissionTable from "@/features/Aggregators/submission/submission-table";
@@ -54,11 +54,6 @@ function SubmissionsPage() {
         <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
       ),
     },
-    {
-      name: "Total Value",
-      value: statisticsLoading ? "..." : formatNaira(totalValue),
-      icon: <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />,
-    },
   ];
 
   return (
@@ -68,7 +63,7 @@ function SubmissionsPage() {
         <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-4 sm:space-y-6">
           <div className="flex flex-col gap-4">
             {/* Stats Grid */}
-            <div className="border border-primary/30 ring-4 ring-primary/10 inline-grid grid-cols-1 gap-px rounded-xl bg-border sm:grid-cols-2 lg:grid-cols-4 w-full min-w-max sm:min-w-full">
+            <div className="border border-primary/30 ring-4 ring-primary/10 inline-grid grid-cols-1 gap-px rounded-xl bg-border sm:grid-cols-2 lg:grid-cols-3 w-full min-w-max sm:min-w-full">
               {data.map((stat, index) => {
                 const isFirst = index === 0;
                 const isLast = index === data.length - 1;

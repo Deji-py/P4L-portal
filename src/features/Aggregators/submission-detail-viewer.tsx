@@ -22,55 +22,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-
-interface Farmer {
-  id: number;
-  user_id: string | null;
-  full_name: string | null;
-  farm_cluster_name: string | null;
-  contact_information: string | null;
-  state: string | null;
-  farm_size: string | null;
-  farming_type: string[] | null;
-  main_crops: string | null;
-  seasonal_calendar: string | null;
-  monthly_output: string | null;
-  irrigation_methods_used: string | null;
-  post_harvest_facilities_available: string | null;
-  ownership_type: string[] | null;
-  land_tenure_status: string[] | null;
-  is_cooperative_member: boolean | null;
-  has_extension_service_access: boolean | null;
-  support_needed_areas: string[] | null;
-  support_needed_other: string | null;
-  created_at: string | null;
-  years_of_operation: string | null;
-  local_gov_area: string | null;
-}
-
-interface FarmerProduce {
-  id: number;
-  submission_date: string;
-  quantity: number | null;
-  unit_measure: string | null;
-  unit_price: number | null;
-  product_name: string | null;
-  request_id: number | null;
-}
-
-interface Submission {
-  id: number;
-  submitted_at: string;
-  aggregator_id: number | null;
-  status: string;
-  score: number | null;
-  accepted: number | null;
-  rejected: number | null;
-  farmer_id: number | null;
-  no_of_proceeds: number | null;
-  farmer_info: Farmer;
-  produce: FarmerProduce[];
-}
+import { Submission } from "@/hooks/aggregators/useSubmissions";
 
 interface SubmissionDetailsSheetProps {
   open: boolean;
@@ -192,7 +144,7 @@ const SubmissionDetailsSheet: React.FC<SubmissionDetailsSheetProps> = ({
             <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
               <p className="text-xs text-blue-600 mb-1">Proceeds</p>
               <p className="text-lg font-bold text-blue-900">
-                {submission.no_of_proceeds || 0}
+                {submission.produce.length || 0}
               </p>
             </div>
             <div className="bg-green-50 rounded-lg p-3 border border-green-100">
@@ -321,7 +273,7 @@ const SubmissionDetailsSheet: React.FC<SubmissionDetailsSheetProps> = ({
                         {item.product_name || "Unknown Product"}
                       </p>
                       <span className="text-xs text-gray-500">
-                        {formatDate(item.submission_date)}
+                        {formatDate(submission.submitted_at)}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs">
@@ -347,44 +299,84 @@ const SubmissionDetailsSheet: React.FC<SubmissionDetailsSheetProps> = ({
                         </p>
                       </div>
                     </div>
+                    {/* Per-item Inspection Details */}
+                    {(item.accepted !== null ||
+                      item.rejected !== null ||
+                      item.score !== null) && (
+                      <div className="grid grid-cols-3 gap-2 text-xs mt-2 pt-2 border-t">
+                        {item.score !== null && (
+                          <div>
+                            <p className="text-gray-500">Score</p>
+                            <p className="font-semibold text-gray-900">
+                              {item.score}%
+                            </p>
+                          </div>
+                        )}
+                        {item.accepted !== null && (
+                          <div>
+                            <p className="text-gray-500">Accepted</p>
+                            <p className="font-semibold text-green-600">
+                              {item.accepted}
+                            </p>
+                          </div>
+                        )}
+                        {item.rejected !== null && (
+                          <div>
+                            <p className="text-gray-500">Rejected</p>
+                            <p className="font-semibold text-rose-600">
+                              {item.rejected}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </section>
           )}
 
-          {/* Inspection Results */}
+          {/* Inspection Results - Summary */}
           {(submission.status === "inspected" ||
-            submission.status === "assigned") && (
-            <section className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Inspection Results
-                </h3>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Quality Score</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {submission.score || 0}%
-                  </p>
+            submission.status === "approved" ||
+            submission.status === "assigned") &&
+            (submission.score !== null ||
+              submission.farmer_info?.support_needed_areas) && (
+              <section className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Inspection Summary
+                  </h3>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Accepted</p>
-                  <p className="text-xl font-bold text-green-600">
-                    {submission.accepted || 0}
-                  </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Overall Score</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {submission.score || 0}%
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Request Status</p>
+                    <p className="text-sm font-semibold capitalize text-gray-900">
+                      {submission.status}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-1">Rejected</p>
-                  <p className="text-xl font-bold text-rose-600">
-                    {submission.rejected || 0}
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
+                {submission.inspection_date && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-gray-500 mb-1">
+                      Inspection Date & Time
+                    </p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {submission.inspection_date}
+                      {submission.inspection_time &&
+                        ` at ${submission.inspection_time}`}
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
 
           {/* Additional Details - Compact */}
           <section className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -428,6 +420,28 @@ const SubmissionDetailsSheet: React.FC<SubmissionDetailsSheetProps> = ({
               </div>
             </div>
           </section>
+
+          {/* Support Needed Areas */}
+          {submission.farmer_info?.support_needed_areas &&
+            submission.farmer_info.support_needed_areas.length > 0 && (
+              <section className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                  Support Needed
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {submission.farmer_info.support_needed_areas.map(
+                    (area, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded border border-blue-200"
+                      >
+                        {area}
+                      </span>
+                    )
+                  )}
+                </div>
+              </section>
+            )}
 
           {/* Submission Timestamp */}
           <div className="flex items-center justify-between pt-2 border-t">

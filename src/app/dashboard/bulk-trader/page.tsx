@@ -20,7 +20,6 @@ import ViewAllRidersDialog from "@/features/Bulk-Foods/dashboard/viewall-riders-
 import { useBulkFoodRequests } from "@/hooks/bulk-traders/useBulkFoodRequests";
 import { useInventory } from "@/hooks/bulk-traders/useInventory";
 
-
 const dispatch_statistics = [
   {
     title: "Assigned",
@@ -147,7 +146,7 @@ function BulkTraderDashboard() {
       const result = await addRequestToInventory({
         bulk_trader_id: bulkTraderId,
         farmer_request_id: farmerRequestId,
-        aggregator_id: aggregatorId,
+        id: aggregatorId,
       });
 
       if (result.success) {
@@ -263,7 +262,7 @@ function BulkTraderDashboard() {
                       status={request.status as any}
                       farmerId={farmerId}
                       farmerRequestId={request.farmer_request_id as number}
-                      aggregatorId={request.aggregator_id as number}
+                      aggregatorId={request.id as number}
                       onAccept={handleAccept}
                       onDecline={handleDecline}
                       onTrackRider={handleTrackRider}

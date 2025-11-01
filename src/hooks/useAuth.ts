@@ -4,6 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmailOtpType, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabaseClient } from "@/utils/client";
+import { useCookies } from "react-cookie";
+import {
+  INTENDED_ROLE_COOKIE_NAME,
+  ROLE_HASH_COOKIE_NAME,
+} from "@/utils/middleware";
 
 // Define types for callbacks
 type AuthCallback<T = any> = {
@@ -169,6 +174,12 @@ const verifyOtp = async (
 function useAuth() {
   const queryClient = useQueryClient();
 
+  const [cookies, setCookie, removeCookie] = useCookies([
+    ROLE_COOKIE_NAME,
+    INTENDED_ROLE_COOKIE_NAME,
+    ROLE_HASH_COOKIE_NAME,
+  ]);
+
   const { data: user, isLoading: userLoading } = useQuery<User | null>({
     queryKey: ["auth", "user"],
     queryFn: fetchUser,
@@ -195,6 +206,9 @@ function useAuth() {
       queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
       if (!callbacks?.onSuccess) {
         toast.success("Logged out successfully!");
+        removeCookie(ROLE_COOKIE_NAME);
+        removeCookie(INTENDED_ROLE_COOKIE_NAME);
+        removeCookie(ROLE_HASH_COOKIE_NAME);
       }
     },
     onError: (error: Error, callbacks) => {

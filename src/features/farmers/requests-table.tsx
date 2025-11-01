@@ -24,6 +24,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -34,10 +35,13 @@ interface Request {
   score: number | null;
   inspected?: boolean;
   aggregators?: {
+    id: number;
     business_name: string;
     local_gov_area: string;
     state: string;
+    aggregator_address?: string;
   };
+  rejection_reason?: string;
   farmer_produce?: Array<{
     product_name: string;
     quantity: number;
@@ -91,6 +95,16 @@ const statusConfigMap = {
     className:
       "bg-purple-500/10 text-purple-700 border-purple-500/30 hover:bg-purple-500/20",
     label: "Assigned",
+  },
+  inspected: {
+    className:
+      "bg-blue-500/10 text-blue-700 border-blue-500/30 hover:bg-blue-500/20",
+    label: "Inspected",
+  },
+  approved: {
+    className:
+      "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20",
+    label: "Approved",
   },
 } as const;
 
@@ -276,7 +290,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
         open={!!selectedRequest}
         onOpenChange={() => setSelectedRequest(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request Details #{selectedRequest?.id}</DialogTitle>
             <DialogDescription>
@@ -306,7 +320,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                     <div className="flex items-center gap-2">
                       <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                       <span className="text-lg font-bold">
-                        {selectedRequest.score.toFixed(1)}/5.0
+                        {selectedRequest.score.toFixed(1)}
                       </span>
                     </div>
                   ) : (
@@ -334,18 +348,42 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 </div>
               </div>
 
-              {/* Aggregator Info */}
-              <div className="p-4 rounded-lg border">
+              {/* Aggregator Info with Address */}
+              <div className="p-4 rounded-lg border space-y-3">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="font-semibold">
+                  <Package className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm mb-1">Aggregator</p>
+                    <p className="text-foreground font-medium">
                       {selectedRequest.aggregators?.business_name}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedRequest.aggregators?.local_gov_area},{" "}
-                      {selectedRequest.aggregators?.state}
+                  </div>
+                </div>
+
+                {/* Location Info */}
+                <div className="flex items-start gap-3 pl-8 border-l border-primary/20">
+                  <MapPin className="h-5 w-5 text-primary -ml-11 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Location
                     </p>
+                    {selectedRequest.aggregators?.aggregator_address && (
+                      <>
+                        <p className="text-sm font-medium text-foreground">
+                          {selectedRequest.aggregators.aggregator_address}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedRequest.aggregators.local_gov_area},{" "}
+                          {selectedRequest.aggregators.state}
+                        </p>
+                      </>
+                    )}
+                    {!selectedRequest.aggregators?.aggregator_address && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRequest.aggregators?.local_gov_area},{" "}
+                        {selectedRequest.aggregators?.state}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -356,8 +394,10 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-primary mt-0.5" />
                     <div>
-                      <p className="font-semibold">Inspection Scheduled</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-semibold text-sm">
+                        Inspection Scheduled
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         {format(
                           new Date(selectedRequest.inspection_date),
                           "MMMM dd, yyyy"
@@ -369,29 +409,49 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 </div>
               )}
 
+              {/* Rejection Reason */}
+              {selectedRequest.status.toLowerCase() === "rejected" &&
+                selectedRequest.rejection_reason && (
+                  <div className="p-4 rounded-lg border bg-destructive/5 border-destructive/30">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-destructive mb-2">
+                          Rejection Reason
+                        </p>
+                        <p className="text-sm text-destructive/80">
+                          {selectedRequest.rejection_reason}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               {/* Produce Items */}
               <div className="space-y-3">
                 <h4 className="font-semibold flex items-center gap-2">
                   <Package className="h-4 w-4" />
-                  Produce Items
+                  Produce Items ({selectedRequest.farmer_produce?.length || 0})
                 </h4>
                 <div className="space-y-2">
                   {selectedRequest.farmer_produce?.map((produce, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 rounded-lg border"
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                     >
-                      <div>
-                        <p className="font-medium">{produce.product_name}</p>
-                        <p className="text-sm text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">
+                          {produce.product_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {produce.quantity} {produce.unit_measure}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">
+                      <div className="text-right ml-4">
+                        <p className="font-semibold text-sm">
                           ₦{produce.unit_price.toLocaleString()}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           per unit
                         </p>
                       </div>
@@ -400,7 +460,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 </div>
 
                 {/* Total */}
-                <div className="flex justify-between items-center p-4 bg-primary/5 rounded-lg">
+                <div className="flex justify-between items-center p-4 bg-primary/5 rounded-lg border border-primary/20 mt-4">
                   <p className="font-semibold">Total Value:</p>
                   <p className="text-xl font-bold text-primary">
                     ₦

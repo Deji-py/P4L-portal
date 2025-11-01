@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, Leaf } from "lucide-react";
+import { Plus, Trash2, Loader2, Leaf, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useFarmerData } from "@/hooks/farmers/useFarmerData";
 
@@ -55,6 +55,11 @@ export function CreateProduceRequestDialog({
       unit_price: 0,
     },
   ]);
+
+  // Get selected aggregator details
+  const selectedAggregatorData = aggregators?.find(
+    (agg: any) => agg.id.toString() === selectedAggregator
+  );
 
   const addProduceItem = () => {
     setProduces([
@@ -95,7 +100,6 @@ export function CreateProduceRequestDialog({
     );
 
     if (product) {
-      // Update both fields at once instead of calling updateProduceItem twice
       const updated = [...produces];
       updated[index] = {
         ...updated[index],
@@ -115,8 +119,6 @@ export function CreateProduceRequestDialog({
       });
       return;
     }
-
-    console.log(produces);
 
     const validProduces = produces.filter(
       (p) =>
@@ -181,7 +183,7 @@ export function CreateProduceRequestDialog({
 
         <div className="space-y-6">
           {/* Select Aggregator */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label htmlFor="aggregator">Select Aggregator *</Label>
             <Select
               value={selectedAggregator}
@@ -198,6 +200,29 @@ export function CreateProduceRequestDialog({
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Display Aggregator Address */}
+            {selectedAggregatorData && (
+              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5">
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-primary mb-1">
+                      {selectedAggregatorData.business_name}
+                    </p>
+                    <p className="text-sm text-foreground">
+                      {selectedAggregatorData.aggregator_address ||
+                        selectedAggregatorData.local_gov_area}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedAggregatorData.local_gov_area},{" "}
+                      {selectedAggregatorData.state}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {(!aggregators || aggregators.length === 0) && (
               <p className="text-sm text-muted-foreground">
                 No aggregators found in your area. Please contact support.
@@ -249,7 +274,7 @@ export function CreateProduceRequestDialog({
                         handleProductChange(index, value);
                       }}
                     >
-                      <SelectTrigger className="w-full  !h-11 ">
+                      <SelectTrigger className="w-full !h-11">
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>

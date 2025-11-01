@@ -1,13 +1,8 @@
 "use client";
 import React from "react";
-import { CookiesProvider } from "react-cookie";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div>
-      <CookiesProvider>{children}</CookiesProvider>
-    </div>
-  );
+  return <div>{children}</div>;
 }
 
 export default AppLayout;
